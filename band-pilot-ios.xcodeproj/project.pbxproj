@@ -6,6 +6,10 @@
 	objectVersion = 77;
 	objects = {
 
+/* Begin PBXBuildFile section */
+		BB10000000000000000000A3 /* BandPilotKit in Frameworks */ = {isa = PBXBuildFile; productRef = BB10000000000000000000A2 /* BandPilotKit */; };
+/* End PBXBuildFile section */
+
 /* Begin PBXFileReference section */
 		D4FB753030115BB50055F533 /* band-pilot-ios.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "band-pilot-ios.app"; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
@@ -23,6 +27,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				BB10000000000000000000A3 /* BandPilotKit in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -65,6 +70,7 @@
 			);
 			name = "band-pilot-ios";
 			packageProductDependencies = (
+				BB10000000000000000000A2 /* BandPilotKit */,
 			);
 			productName = "band-pilot-ios";
 			productReference = D4FB753030115BB50055F533 /* band-pilot-ios.app */;
@@ -94,6 +100,9 @@
 			);
 			mainGroup = D4FB752730115BB50055F533;
 			minimizedProjectReferenceProxies = 1;
+			packageReferences = (
+				BB10000000000000000000A1 /* XCLocalSwiftPackageReference "BandPilotKit" */,
+			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = D4FB753130115BB50055F533 /* Products */;
 			projectDirPath = "";
@@ -177,7 +186,7 @@
 				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
 				GCC_WARN_UNUSED_FUNCTION = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
-				IPHONEOS_DEPLOYMENT_TARGET = 26.5;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
 				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
 				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
 				MTL_FAST_MATH = YES;
@@ -234,7 +243,7 @@
 				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
 				GCC_WARN_UNUSED_FUNCTION = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
-				IPHONEOS_DEPLOYMENT_TARGET = 26.5;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
 				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
 				MTL_ENABLE_DEBUG_INFO = NO;
 				MTL_FAST_MATH = YES;
@@ -328,6 +337,20 @@
 			defaultConfigurationName = Release;
 		};
 /* End XCConfigurationList section */
+
+/* Begin XCLocalSwiftPackageReference section */
+		BB10000000000000000000A1 /* XCLocalSwiftPackageReference "BandPilotKit" */ = {
+			isa = XCLocalSwiftPackageReference;
+			relativePath = BandPilotKit;
+		};
+/* End XCLocalSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		BB10000000000000000000A2 /* BandPilotKit */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = BandPilotKit;
+		};
+/* End XCSwiftPackageProductDependency section */
 	};
 	rootObject = D4FB752830115BB50055F533 /* Project object */;
 }
