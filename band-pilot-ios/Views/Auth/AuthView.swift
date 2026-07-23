@@ -144,6 +144,8 @@ private struct ForgotPasswordSheet: View {
                         .font(.footnote)
                         .foregroundStyle(Palette.textDim)
                         .frame(maxWidth: .infinity, alignment: .leading)
+                    if let error = vm.error { ErrorBanner(message: error) }
+                    if let info = vm.info { InfoBanner(message: info) }
                     LabeledField(label: "Email", text: $email, keyboard: .emailAddress)
                     PrimaryButton(
                         title: vm.busy ? "Please wait…" : "Send reset link",
