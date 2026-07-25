@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<!-- Xcode merges the INFOPLIST_KEY_* build settings (scene manifest, launch screen,
+	     orientations, versions) into this file, so only the keys it cannot express live here. -->
+
+	<!-- Lets a device build reach the dev backend on the Mac over plain HTTP.
+	     Covers *.local (Bonjour) names, unqualified host names and private-range IPs;
+	     public HTTPS requirements are untouched. -->
+	<key>NSAppTransportSecurity</key>
+	<dict>
+		<key>NSAllowsLocalNetworking</key>
+		<true/>
+	</dict>
+
+	<!-- iOS 14+ prompts before an app may talk to hosts on the local network. -->
+	<key>NSLocalNetworkUsageDescription</key>
+	<string>BandPilot connects to a Roadie backend running on your Mac when testing a development build.</string>
+
+	<!-- The app only uses the platform's standard HTTPS, which is exempt from US export
+	     regulations. Declaring it here skips the export-compliance prompt on every upload. -->
+	<key>ITSAppUsesNonExemptEncryption</key>
+	<false/>
+</dict>
+</plist>
