@@ -4,9 +4,12 @@ import BandPilotKit
 struct BandsView: View {
     let session: SessionStore
     let api: APIClient
+    let library: MediaLibrary
     @State private var vm: BandsViewModel
+    @State private var showStorage = false
 
-    init(session: SessionStore, api: APIClient) {
+    init(session: SessionStore, api: APIClient, library: MediaLibrary) {
+        self.library = library
         self.session = session
         self.api = api
         _vm = State(wrappedValue: BandsViewModel(api: api))
@@ -24,6 +27,7 @@ struct BandsView: View {
                     if let user = session.user {
                         Text(user.fullName)
                     }
+                    Button("Storage…") { showStorage = true }
                     Button("Sign out", role: .destructive) { session.signOut() }
                 } label: {
                     Image(systemName: "person.crop.circle")
@@ -31,6 +35,7 @@ struct BandsView: View {
             }
         }
         .task { await vm.load() }
+        .navigationDestination(isPresented: $showStorage) { MediaStorageView(library: library) }
     }
 
     @ViewBuilder private var content: some View {

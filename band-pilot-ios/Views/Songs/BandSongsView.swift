@@ -3,13 +3,15 @@ import BandPilotKit
 
 struct BandSongsView: View {
     @State private var vm: BandDetailViewModel
+    let library: MediaLibrary
     @Environment(\.isWide) private var isWide
 
     @State private var editingSong: BandSong?
     @State private var votingSongId: Int?
     @State private var mediaSong: BandSong?
 
-    init(bandId: Int, currentUserId: Int, api: APIClient) {
+    init(bandId: Int, currentUserId: Int, api: APIClient, library: MediaLibrary) {
+        self.library = library
         _vm = State(wrappedValue: BandDetailViewModel(bandId: bandId, currentUserId: currentUserId, api: api))
     }
 
@@ -32,6 +34,8 @@ struct BandSongsView: View {
         }
         .task {
             await vm.load()
+            // one band-scoped call; a 404 degrades to links-only rather than erroring
+            await vm.loadMediaFiles(library: library)
             #if DEBUG
             let env = ProcessInfo.processInfo.environment
             if env["BP_OPEN_VOTING"] == "1" { votingSongId = vm.visibleSongs.first?.id }
@@ -52,7 +56,13 @@ struct BandSongsView: View {
             SongEditSheet(vm: vm, song: song)
         }
         .sheet(item: $mediaSong) { song in
-            MediaSheet(song: song, links: vm.media(for: song.id))
+            MediaSheet(
+                song: song,
+                links: vm.media(for: song.id),
+                bandId: vm.bandId,
+                vm: vm,
+                library: library
+            )
         }
     }
 

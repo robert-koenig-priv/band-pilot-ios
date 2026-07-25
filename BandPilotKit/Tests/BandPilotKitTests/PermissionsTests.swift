@@ -25,3 +25,23 @@ final class PermissionsTests: XCTestCase {
         XCTAssertFalse(Permissions.canVoteFor(memberId: 8, myBandMemberId: nil, isAdmin: false))
     }
 }
+
+extension PermissionsTests {
+    /// Media files use a wider rule than song editing, matching the backend's canManageMediaFiles.
+    func testUploadingMediaIsOpenToPlainMembersButNotGuests() {
+        // a plain MEMBER must be able to upload, or the "singer's version of the lead sheet" case --
+        // the whole reason the owner tag exists -- is impossible
+        XCTAssertTrue(Permissions.canUploadMedia(.member))
+        XCTAssertTrue(Permissions.canUploadMedia(.editor))
+        XCTAssertTrue(Permissions.canUploadMedia(.admin))
+        XCTAssertTrue(Permissions.canUploadMedia(.globalAdmin))
+        // GUEST is documented read-only; writing files while unable to rate a song would be incoherent
+        XCTAssertFalse(Permissions.canUploadMedia(.guest))
+        XCTAssertFalse(Permissions.canUploadMedia(nil))
+    }
+
+    func testDeletingAFileFollowsTheSameRuleBecauseThereIsNoPerFileACL() {
+        XCTAssertTrue(Permissions.canDeleteMediaFile(.member))
+        XCTAssertFalse(Permissions.canDeleteMediaFile(.guest))
+    }
+}

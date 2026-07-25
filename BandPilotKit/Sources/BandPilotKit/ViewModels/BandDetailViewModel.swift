@@ -14,9 +14,33 @@ public final class BandDetailViewModel {
     public private(set) var flags: [Int: [BandSongFlag]] = [:]   // keyed by songId
     public private(set) var flagCatalog: [Flag] = []
     public private(set) var mediaLinks: [Int: [MediaLink]] = [:]   // keyed by songId (lazily loaded)
+
+    /// Media **files** per song, plus band-level ones under ``bandLevelFilesKey``.
+    ///
+    /// Unlike links, these come from one band-scoped call: the backend offers a bulk read deliberately,
+    /// because a second per-song fan-out on top of the links one would double the request count against
+    /// an instance that sleeps after 15 minutes.
+    public private(set) var mediaFiles: [Int: [MediaFile]] = [:]
+
+    /// False when the backend predates media files (404 on the list). The upload affordance hides rather
+    /// than offering an action that cannot work, so this client stays usable against an older deployment.
+    public private(set) var mediaFilesSupported = true
+
+    /// What this member may upload: storage present, terms pending, per-kind size caps.
+    public private(set) var uploadPolicy: MediaUploadPolicy?
+
+    /// Which owner's files the panel shows. In-memory, consistent with this app's deliberate choice not
+    /// to persist filter/sort state.
+    public var ownerFilter: MediaOwnerFilter = .mineAndBand
+
+    public static let bandLevelFilesKey = -1
     public private(set) var roster: [BandMember] = []
     public private(set) var myBandMemberId: Int?
     public private(set) var isAdmin = false
+
+    /// The caller's raw role in this band, so media affordances can use ``Permissions/canUploadMedia(_:)``
+    /// — which is deliberately wider than ``canEditSongs``.
+    public private(set) var myRole: SecurityRole?
     public private(set) var canEditSongs = false
 
     // UI state
@@ -36,7 +60,8 @@ public final class BandDetailViewModel {
 
     @ObservationIgnored public let bandId: Int
     @ObservationIgnored private let currentUserId: Int
-    @ObservationIgnored private let api: APIClient
+    @ObservationIgnored /// Exposed so the upload sheet can drive the three-phase upload without a second client.
+ public let api: APIClient
     @ObservationIgnored private var mediaInFlight: Set<Int> = []
 
     public init(bandId: Int, currentUserId: Int, api: APIClient) {
@@ -67,6 +92,7 @@ public final class BandDetailViewModel {
 
             if let me = memberships.first(where: { $0.userId == currentUserId }) {
                 myBandMemberId = me.bandMemberId
+                myRole = me.securityRole
                 isAdmin = Permissions.isAdmin(me.securityRole)
                 canEditSongs = Permissions.canEditSongs(me.securityRole)
             }
@@ -120,7 +146,49 @@ public final class BandDetailViewModel {
 
     // MARK: - Media links (lazily fetched per song, no bulk read)
 
-    public func hasMedia(_ songId: Int) -> Bool { !(mediaLinks[songId]?.isEmpty ?? true) }
+    /// Whether a song has anything at all — link or file. Gates the row's play button.
+    public func hasMedia(_ songId: Int) -> Bool {
+        !(mediaLinks[songId]?.isEmpty ?? true) || !files(for: songId).isEmpty
+    }
+
+    public func files(for songId: Int) -> [MediaFile] { mediaFiles[songId] ?? [] }
+
+    /// One band-scoped call for every file.
+    ///
+    /// A 404 means this backend has no media-file endpoints yet: degrade to links-only rather than
+    /// surfacing an error the user cannot act on.
+    public func loadMediaFiles(library: MediaLibrary?) async {
+        do {
+            let files = try await api.send(.mediaFiles(bandId: bandId))
+            mediaFiles = Dictionary(grouping: files) { $0.bandSongId ?? Self.bandLevelFilesKey }
+            mediaFilesSupported = true
+            // only ever with a SUCCESSFUL list: an empty one must not be read as "all gone"
+            library?.reconcile(with: files)
+            uploadPolicy = try? await api.send(.mediaUploadPolicy(bandId: bandId))
+        } catch APIError.http(let status, _, _) where status == 404 {
+            mediaFilesSupported = false
+        } catch {
+            // links still work; a file-list failure must not blank the whole screen
+        }
+    }
+
+    /// Patch state from a write response instead of re-fetching, as ratings and flags already do.
+    public func fileChanged(_ file: MediaFile) {
+        let key = file.bandSongId ?? Self.bandLevelFilesKey
+        for (songId, list) in mediaFiles {
+            mediaFiles[songId] = list.filter { $0.id != file.id }
+        }
+        mediaFiles[key] = (mediaFiles[key] ?? []) + [file]
+        mediaFiles[key]?.sort { $0.name.localizedCaseInsensitiveCompare($1.name) == .orderedAscending }
+    }
+
+    public func deleteFile(_ file: MediaFile, library: MediaLibrary?) async {
+        guard (try? await api.send(.deleteMediaFile(bandId: bandId, fileId: file.id))) != nil else { return }
+        library?.removeDownload(file)
+        for (songId, list) in mediaFiles {
+            mediaFiles[songId] = list.filter { $0.id != file.id }
+        }
+    }
     public func media(for songId: Int) -> [MediaLink] { mediaLinks[songId] ?? [] }
 
     /// Fetch a song's media links once (called as rows appear). No-ops if already loaded/in-flight.
