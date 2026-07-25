@@ -50,6 +50,9 @@ final class AudioPlayerModel {
         timeObserver = nil
         statusObserver?.invalidate()
         statusObserver = nil
+        // Release the session, or music from other apps never resumes after leaving the player. The
+        // session was activated in start() and was previously never deactivated.
+        try? AVAudioSession.sharedInstance().setActive(false)
     }
 
     func togglePlay() {
@@ -80,8 +83,15 @@ struct AudioPracticePlayerScreen: View {
     @State private var model: AudioPlayerModel
     @State private var dragValue: Double?
 
-    init(song: BandSong, url: URL) {
+    /// Set for a cached media file rather than a streamed `MediaLink`, which changes what a playback
+    /// failure means: a local file that will not play is a damaged download, not a bad URL.
+    private let isLocalFile: Bool
+    private let onRedownload: (() -> Void)?
+
+    init(song: BandSong, url: URL, isLocalFile: Bool = false, onRedownload: (() -> Void)? = nil) {
         self.song = song
+        self.isLocalFile = isLocalFile
+        self.onRedownload = onRedownload
         _model = State(wrappedValue: AudioPlayerModel(url: url))
     }
 
@@ -92,7 +102,15 @@ struct AudioPracticePlayerScreen: View {
             Palette.bg.ignoresSafeArea()
             VStack(alignment: .leading, spacing: 16) {
                 Text(song.artist ?? "—").foregroundStyle(Palette.textDim)
-                if let error = model.error { ErrorBanner(message: error) }
+                if let error = model.error {
+                    ErrorBanner(message: isLocalFile ? "This download is damaged." : error)
+                    if let onRedownload {
+                        Button("Remove download and try again") {
+                            onRedownload()
+                        }
+                        .foregroundStyle(Palette.accent)
+                    }
+                }
 
                 Slider(
                     value: Binding(
