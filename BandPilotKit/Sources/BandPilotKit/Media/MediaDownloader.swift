@@ -33,9 +33,9 @@ public enum MediaTransferError: Error, Sendable, Equatable {
     case integrityFailed
     case notEnoughSpace(needBytes: Int64)
 
-    /// Wording for the UI. Deliberately never says "the backend is waking up": the failing host here is
-    /// the band's storage provider, and blaming the Roadie backend for a Cloudflare problem sends people
-    /// to wait for something that will not help.
+    /// Wording for the UI. Deliberately never says the Data Backend is unavailable: the failing host here
+    /// is the band's storage provider, and blaming the Roadie backend for a Cloudflare problem sends
+    /// people to wait for something that will not help.
     public var userMessage: String {
         switch self {
         case .linkExpired: return "This file's link expired — please try again."

@@ -11,7 +11,12 @@ public enum HTTPMethod: String, Sendable {
 public enum APIError: Error, Sendable, Equatable {
     /// 401 on a non-auth call → the caller clears the session and returns to login.
     case unauthorized
-    /// Connection failure or 5xx — the Render free tier sleeps; show a friendly note + auto-retry.
+    /// Connection failure or 5xx — the backend could not be reached at all. Worth a retry, since the
+    /// commonest causes are transient.
+    ///
+    /// The name is historical: it was coined when the backend ran on a free tier that slept when idle, so
+    /// the message promised it back "in 1-2 min". It no longer sleeps, and the message no longer makes a
+    /// promise it cannot keep.
     case backendWaking
     /// Any other non-2xx, with the decoded `{message,error}` body if present.
     case http(status: Int, message: String?, error: String?)
@@ -23,7 +28,7 @@ public enum APIError: Error, Sendable, Equatable {
         case .unauthorized:
             return "Your session expired. Please sign in again."
         case .backendWaking:
-            return "Data Backend available in 1-2 min."
+            return "Data Backend currently not available"
         case let .http(status, message, error):
             return message ?? error ?? "Request failed (\(status))."
         case .decoding:
@@ -33,7 +38,7 @@ public enum APIError: Error, Sendable, Equatable {
         }
     }
 
-    /// True while the backend is (probably) still waking up, so the caller can schedule a retry.
+    /// True when the backend could not be reached, so the caller can offer or schedule a retry.
     public var isBackendWaking: Bool {
         if case .backendWaking = self { return true }
         return false
