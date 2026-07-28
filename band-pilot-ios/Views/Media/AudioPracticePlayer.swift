@@ -79,7 +79,7 @@ final class AudioPlayerModel {
 }
 
 struct AudioPracticePlayerScreen: View {
-    let song: BandSong
+    let song: Song
     @State private var model: AudioPlayerModel
     @State private var dragValue: Double?
 
@@ -88,7 +88,7 @@ struct AudioPracticePlayerScreen: View {
     private let isLocalFile: Bool
     private let onRedownload: (() -> Void)?
 
-    init(song: BandSong, url: URL, isLocalFile: Bool = false, onRedownload: (() -> Void)? = nil) {
+    init(song: Song, url: URL, isLocalFile: Bool = false, onRedownload: (() -> Void)? = nil) {
         self.song = song
         self.isLocalFile = isLocalFile
         self.onRedownload = onRedownload

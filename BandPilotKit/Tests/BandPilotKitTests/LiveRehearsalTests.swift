@@ -39,8 +39,8 @@ final class LiveRehearsalTests: XCTestCase {
         }
 
         // add a song
-        let added = try await api.send(.addRehearsalSong(bandId: bandId, rehearsalId: created.id, .init(bandSongId: firstSong.id)))
-        XCTAssertEqual(added.bandSongId, firstSong.id)
+        let added = try await api.send(.addRehearsalSong(bandId: bandId, rehearsalId: created.id, .init(songId: firstSong.id)))
+        XCTAssertEqual(added.songId, firstSong.id)
 
         var detail = try await api.send(.rehearsalDetail(bandId: bandId, id: created.id))
         XCTAssertEqual(detail.songs.count, 1)

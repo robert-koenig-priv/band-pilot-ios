@@ -80,7 +80,7 @@ public enum TakedownState: String, Codable, Sendable, Hashable {
 public struct MediaFile: Codable, Sendable, Identifiable, Hashable {
     public let id: Int
     public let bandId: Int
-    public let bandSongId: Int?
+    public let songId: Int?
     public let name: String
     public let kind: MediaFileKind
     public let mimeType: String
@@ -166,7 +166,7 @@ public struct MediaFileUploadIntentRequest: Codable, Sendable {
     public let sizeBytes: Int64
     public let contentMd5: String?
     public let sha256: String?
-    public let bandSongId: Int?
+    public let songId: Int?
     public let ownerBandMemberId: Int?
     public let acceptTerms: Bool
 
@@ -177,7 +177,7 @@ public struct MediaFileUploadIntentRequest: Codable, Sendable {
         sizeBytes: Int64,
         contentMd5: String? = nil,
         sha256: String? = nil,
-        bandSongId: Int? = nil,
+        songId: Int? = nil,
         ownerBandMemberId: Int? = nil,
         acceptTerms: Bool = false
     ) {
@@ -187,7 +187,7 @@ public struct MediaFileUploadIntentRequest: Codable, Sendable {
         self.sizeBytes = sizeBytes
         self.contentMd5 = contentMd5
         self.sha256 = sha256
-        self.bandSongId = bandSongId
+        self.songId = songId
         self.ownerBandMemberId = ownerBandMemberId
         self.acceptTerms = acceptTerms
     }

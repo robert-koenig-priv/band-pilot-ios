@@ -34,7 +34,7 @@ public struct RehearsalDetail: Codable, Sendable, Identifiable, Hashable {
 public struct RehearsalSong: Codable, Sendable, Identifiable, Hashable {
     public let id: Int          // the join-row id (used for reorder/remove)
     public let rehearsalId: Int
-    public let bandSongId: Int
+    public let songId: Int
     public let songName: String
     public let artist: String?
     public var ordering: Int

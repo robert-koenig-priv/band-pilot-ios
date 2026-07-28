@@ -3,7 +3,7 @@ import XCTest
 
 final class RatingMathTests: XCTestCase {
     private func ratings(_ values: [Int]) -> [SongRating] {
-        values.enumerated().map { SongRating(id: $0.offset, bandSongId: 1, bandMemberId: $0.offset, rating: $0.element) }
+        values.enumerated().map { SongRating(id: $0.offset, songId: 1, bandMemberId: $0.offset, rating: $0.element) }
     }
 
     func testEmptyIsZero() {

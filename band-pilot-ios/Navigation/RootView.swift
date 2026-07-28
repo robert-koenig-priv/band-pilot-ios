@@ -51,7 +51,7 @@ struct MainNavigation: View {
                 .navigationDestination(for: AppRoute.self) { route in
                     switch route {
                     case let .songs(bandId):
-                        BandSongsView(
+                        SongsView(
                             bandId: bandId,
                             currentUserId: session.user?.id ?? 0,
                             api: api,

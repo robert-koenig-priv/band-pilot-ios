@@ -17,8 +17,8 @@ final class RehearsalTests: XCTestCase {
     func testDecodeRehearsalDetail() throws {
         let json = """
         {"id":16,"bandId":2,"plannedAt":"2026-07-28T18:30:00","status":"PLANNED",
-         "songs":[{"id":333,"rehearsalId":16,"bandSongId":36,"songName":"Honky Tonk Women","artist":"The Rolling Stones","ordering":0,"details":null},
-                  {"id":335,"rehearsalId":16,"bandSongId":24,"songName":"Are You Gonna Be My Girl","artist":"Jet","ordering":2,"details":null}],
+         "songs":[{"id":333,"rehearsalId":16,"songId":36,"songName":"Honky Tonk Women","artist":"The Rolling Stones","ordering":0,"details":null},
+                  {"id":335,"rehearsalId":16,"songId":24,"songName":"Are You Gonna Be My Girl","artist":"Jet","ordering":2,"details":null}],
          "missingMembers":[]}
         """
         let detail = try decoder.decode(RehearsalDetail.self, from: Data(json.utf8))

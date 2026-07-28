@@ -1,7 +1,7 @@
 import Foundation
 
 // All structs mirror the backend JSON by-name (camelCase keys), so no custom
-// CodingKeys are needed except where a field may be absent (see BandSong).
+// CodingKeys are needed except where a field may be absent (see Song).
 
 public struct User: Codable, Sendable, Identifiable, Hashable {
     public let id: Int
@@ -59,19 +59,19 @@ public struct Flag: Codable, Sendable, Identifiable, Hashable {
 
 public struct SongRating: Codable, Sendable, Identifiable, Hashable {
     public let id: Int
-    public let bandSongId: Int
+    public let songId: Int
     public let bandMemberId: Int
     public let rating: Int
 
-    public init(id: Int, bandSongId: Int, bandMemberId: Int, rating: Int) {
-        self.id = id; self.bandSongId = bandSongId; self.bandMemberId = bandMemberId; self.rating = rating
+    public init(id: Int, songId: Int, bandMemberId: Int, rating: Int) {
+        self.id = id; self.songId = songId; self.bandMemberId = bandMemberId; self.rating = rating
     }
 }
 
 /// A flag assigned to a song. `effectiveColor` mirrors the Android `effectiveColor()`.
-public struct BandSongFlag: Codable, Sendable, Identifiable, Hashable {
+public struct SongFlag: Codable, Sendable, Identifiable, Hashable {
     public let id: Int
-    public let bandSongId: Int
+    public let songId: Int
     public let flagId: Int
     public let meaning: String
     public let description: String?
@@ -83,7 +83,7 @@ public struct BandSongFlag: Codable, Sendable, Identifiable, Hashable {
     public var effectiveColor: String { color ?? flagColor }
 }
 
-public struct BandSong: Codable, Sendable, Identifiable, Hashable {
+public struct Song: Codable, Sendable, Identifiable, Hashable {
     public let id: Int
     public let bandId: Int
     public var name: String
@@ -134,7 +134,7 @@ public struct BandSong: Codable, Sendable, Identifiable, Hashable {
 }
 
 /// Item of the bulk `GET .../songs-with-ratings`: a song plus its ratings and flags.
-public struct BandSongWithRatings: Codable, Sendable, Identifiable, Hashable {
+public struct SongWithRatings: Codable, Sendable, Identifiable, Hashable {
     public let id: Int
     public let bandId: Int
     public let name: String
@@ -149,7 +149,7 @@ public struct BandSongWithRatings: Codable, Sendable, Identifiable, Hashable {
     public let status: SongStatus
     public let averageRating: Double
     public let ratings: [SongRating]
-    public let flags: [BandSongFlag]
+    public let flags: [SongFlag]
 
     private enum CodingKeys: String, CodingKey {
         case id, bandId, name, artist, year, originalKey, key, originalBpm, bpm, durationSec, comments, status, averageRating, ratings, flags
@@ -171,12 +171,12 @@ public struct BandSongWithRatings: Codable, Sendable, Identifiable, Hashable {
         status = try c.decode(SongStatus.self, forKey: .status)
         averageRating = try c.decodeIfPresent(Double.self, forKey: .averageRating) ?? 0.0
         ratings = try c.decodeIfPresent([SongRating].self, forKey: .ratings) ?? []
-        flags = try c.decodeIfPresent([BandSongFlag].self, forKey: .flags) ?? []
+        flags = try c.decodeIfPresent([SongFlag].self, forKey: .flags) ?? []
     }
 
-    /// The plain `BandSong` projection (as the Android `toSong()` split does).
-    public var song: BandSong {
-        BandSong(
+    /// The plain `Song` projection (as the Android `toSong()` split does).
+    public var song: Song {
+        Song(
             id: id, bandId: bandId, name: name, artist: artist, year: year, originalKey: originalKey,
             key: key, originalBpm: originalBpm, bpm: bpm, durationSec: durationSec, comments: comments,
             status: status, averageRating: averageRating

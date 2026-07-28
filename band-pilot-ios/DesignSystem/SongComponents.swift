@@ -63,7 +63,7 @@ struct StatusBadge: View {
 
 /// Colored flag icons for a song, deduped by flag id (mirrors Android FlagBadges).
 struct FlagBadges: View {
-    let flags: [BandSongFlag]
+    let flags: [SongFlag]
     var size: CGFloat = 14
 
     var body: some View {
@@ -76,9 +76,9 @@ struct FlagBadges: View {
         }
     }
 
-    private var deduped: [BandSongFlag] {
+    private var deduped: [SongFlag] {
         var seen = Set<Int>()
-        var out: [BandSongFlag] = []
+        var out: [SongFlag] = []
         for f in flags where !seen.contains(f.flagId) {
             seen.insert(f.flagId)
             out.append(f)

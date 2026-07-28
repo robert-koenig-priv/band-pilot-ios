@@ -69,9 +69,9 @@ final class DecodingTests: XCTestCase {
         {"id":8,"bandId":2,"name":"All Right Now","artist":"Free","year":"1970",
          "originalKey":"A","key":null,"originalBpm":120,"bpm":null,"durationSec":331,
          "comments":null,"status":"READY_FOR_STAGE","averageRating":3.0,
-         "ratings":[{"id":46,"bandSongId":8,"bandMemberId":3,"rating":3}],"flags":[]}
+         "ratings":[{"id":46,"songId":8,"bandMemberId":3,"rating":3}],"flags":[]}
         """
-        let s = try decode(BandSongWithRatings.self, json)
+        let s = try decode(SongWithRatings.self, json)
         XCTAssertEqual(s.id, 8)
         XCTAssertNil(s.key)
         XCTAssertEqual(s.status, .readyForStage)
@@ -82,21 +82,21 @@ final class DecodingTests: XCTestCase {
         XCTAssertEqual(s.song.durationSec, 331)
     }
 
-    func testBandSongDefaultsAverageWhenAbsent() throws {
+    func testSongDefaultsAverageWhenAbsent() throws {
         // The plain song PUT response omits averageRating → must default to 0.0.
         let json = """
         {"id":8,"bandId":2,"name":"X","artist":"Y","year":null,"originalKey":null,"key":null,
          "originalBpm":null,"bpm":null,"durationSec":null,"comments":null,"status":"SUGGESTED"}
         """
-        let s = try decode(BandSong.self, json)
+        let s = try decode(Song.self, json)
         XCTAssertEqual(s.averageRating, 0.0)
         XCTAssertEqual(s.status, .suggested)
     }
 
-    func testBandSongFlagEffectiveColor() throws {
-        let withOverride = ##"{"id":1,"bandSongId":8,"flagId":5,"meaning":"Acoustic","description":null,"meaningDetails":null,"color":"#FF0000","flagColor":"#936201","bandMemberId":null}"##
-        XCTAssertEqual(try decode(BandSongFlag.self, withOverride).effectiveColor, "#FF0000")
-        let noOverride = ##"{"id":1,"bandSongId":8,"flagId":5,"meaning":"Acoustic","description":null,"meaningDetails":null,"color":null,"flagColor":"#936201","bandMemberId":null}"##
-        XCTAssertEqual(try decode(BandSongFlag.self, noOverride).effectiveColor, "#936201")
+    func testSongFlagEffectiveColor() throws {
+        let withOverride = ##"{"id":1,"songId":8,"flagId":5,"meaning":"Acoustic","description":null,"meaningDetails":null,"color":"#FF0000","flagColor":"#936201","bandMemberId":null}"##
+        XCTAssertEqual(try decode(SongFlag.self, withOverride).effectiveColor, "#FF0000")
+        let noOverride = ##"{"id":1,"songId":8,"flagId":5,"meaning":"Acoustic","description":null,"meaningDetails":null,"color":null,"flagColor":"#936201","bandMemberId":null}"##
+        XCTAssertEqual(try decode(SongFlag.self, noOverride).effectiveColor, "#936201")
     }
 }

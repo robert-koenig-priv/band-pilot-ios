@@ -2,8 +2,8 @@ import XCTest
 @testable import BandPilotKit
 
 final class SongSortingTests: XCTestCase {
-    private func song(_ id: Int, _ name: String, _ artist: String?, _ status: SongStatus, _ avg: Double) -> BandSong {
-        BandSong(id: id, bandId: 1, name: name, artist: artist, status: status, averageRating: avg)
+    private func song(_ id: Int, _ name: String, _ artist: String?, _ status: SongStatus, _ avg: Double) -> Song {
+        Song(id: id, bandId: 1, name: name, artist: artist, status: status, averageRating: avg)
     }
 
     func testPracticeOrderByStatusThenRatingDesc() {

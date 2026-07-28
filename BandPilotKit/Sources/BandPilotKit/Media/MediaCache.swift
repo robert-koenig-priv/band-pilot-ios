@@ -17,7 +17,7 @@ public struct MediaCacheEntry: Codable, Sendable, Hashable {
     public let kind: MediaFileKind
     public let mimeType: String
     public let bytes: Int64
-    public let bandSongId: Int?
+    public let songId: Int?
     public let ownerBandMemberId: Int?
     public let cachedAt: Date
     public var lastAccessedAt: Date
@@ -146,7 +146,7 @@ public final class MediaCache: @unchecked Sendable {
         lock.withLock {
             index[file.id] = MediaCacheEntry(
                 fileId: file.id, digest: digest, fileExtension: ext, name: file.name, kind: file.kind,
-                mimeType: file.mimeType, bytes: file.sizeBytes, bandSongId: file.bandSongId,
+                mimeType: file.mimeType, bytes: file.sizeBytes, songId: file.songId,
                 ownerBandMemberId: file.ownerBandMemberId, cachedAt: stamp, lastAccessedAt: stamp,
                 pinned: false
             )

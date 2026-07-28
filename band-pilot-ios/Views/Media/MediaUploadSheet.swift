@@ -10,7 +10,7 @@ import UniformTypeIdentifiers
 /// egress at 3x stored data per day.
 struct MediaUploadSheet: View {
     let bandId: Int
-    let song: BandSong
+    let song: Song
     let vm: BandDetailViewModel
     let library: MediaLibrary
 

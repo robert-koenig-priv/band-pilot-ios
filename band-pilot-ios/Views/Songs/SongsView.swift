@@ -1,14 +1,14 @@
 import SwiftUI
 import BandPilotKit
 
-struct BandSongsView: View {
+struct SongsView: View {
     @State private var vm: BandDetailViewModel
     let library: MediaLibrary
     @Environment(\.isWide) private var isWide
 
-    @State private var editingSong: BandSong?
+    @State private var editingSong: Song?
     @State private var votingSongId: Int?
-    @State private var mediaSong: BandSong?
+    @State private var mediaSong: Song?
 
     init(bandId: Int, currentUserId: Int, api: APIClient, library: MediaLibrary) {
         self.library = library

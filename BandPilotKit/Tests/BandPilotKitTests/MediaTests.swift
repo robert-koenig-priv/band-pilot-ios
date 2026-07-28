@@ -4,9 +4,9 @@ import XCTest
 final class MediaTests: XCTestCase {
     func testDecodeMediaLinks() throws {
         let json = """
-        [{"id":21,"bandSongId":8,"name":"Studio","mediaType":"YOUTUBE","url":"https://www.youtube.com/watch?v=lSdBtoIIYT4"},
-         {"id":13,"bandSongId":5,"name":"Backing Vocal","mediaType":"AUDIO","url":"https://example.com/x.mp3"},
-         {"id":9,"bandSongId":12,"name":"Spotify","mediaType":"SPOTIFY","url":"https://open.spotify.com/track/abc"}]
+        [{"id":21,"songId":8,"name":"Studio","mediaType":"YOUTUBE","url":"https://www.youtube.com/watch?v=lSdBtoIIYT4"},
+         {"id":13,"songId":5,"name":"Backing Vocal","mediaType":"AUDIO","url":"https://example.com/x.mp3"},
+         {"id":9,"songId":12,"name":"Spotify","mediaType":"SPOTIFY","url":"https://open.spotify.com/track/abc"}]
         """
         let links = try JSONDecoder().decode([MediaLink].self, from: Data(json.utf8))
         XCTAssertEqual(links.count, 3)

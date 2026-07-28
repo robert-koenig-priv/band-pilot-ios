@@ -11,7 +11,7 @@ final class MediaFileDecodingTests: XCTestCase {
 
     private var fullJSON: String {
         """
-        {"id":7,"bandId":1,"bandSongId":3,"name":"Lead sheet","kind":"SHEET",
+        {"id":7,"bandId":1,"songId":3,"name":"Lead sheet","kind":"SHEET",
          "mimeType":"application/pdf","sizeBytes":123456,"sha256":"abc","ownerBandMemberId":9,
          "uploadState":"READY","takedownState":"ACTIVE","uploadedByUserId":2,
          "uploadedAt":"2026-07-25T12:00:00Z","createdAt":"2026-07-25T11:59:00Z",

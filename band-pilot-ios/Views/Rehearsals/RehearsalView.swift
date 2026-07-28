@@ -170,7 +170,7 @@ struct RehearsalView: View {
 
             Section {
                 ForEach(vm.availableSongs) { song in
-                    Button { Task { await vm.addSong(bandSongId: song.id) } } label: {
+                    Button { Task { await vm.addSong(songId: song.id) } } label: {
                         HStack(spacing: 10) {
                             Image(systemName: "plus.circle.fill").foregroundStyle(Palette.selected)
                             VStack(alignment: .leading, spacing: 2) {

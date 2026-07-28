@@ -71,7 +71,7 @@ final class MediaDownloaderTests: XCTestCase {
 
     private func file(_ bytes: Data, id: Int = 7, digest: String? = nil) -> MediaFile {
         MediaFile(
-            id: id, bandId: 1, bandSongId: nil, name: "Track", kind: .audio, mimeType: "audio/mpeg",
+            id: id, bandId: 1, songId: nil, name: "Track", kind: .audio, mimeType: "audio/mpeg",
             sizeBytes: Int64(bytes.count), sha256: digest ?? Digest.sha256Hex(of: bytes),
             ownerBandMemberId: nil, uploadState: .ready, takedownState: .active, uploadedByUserId: 1,
             uploadedAt: nil, createdAt: "", deletedAt: nil, downloadable: true
@@ -203,7 +203,7 @@ final class MediaDownloaderTests: XCTestCase {
         let transfer = FakeTransfer([.bytes(bytes)])
         var media = file(bytes)
         media = MediaFile(
-            id: media.id, bandId: 1, bandSongId: nil, name: media.name, kind: media.kind,
+            id: media.id, bandId: 1, songId: nil, name: media.name, kind: media.kind,
             mimeType: media.mimeType, sizeBytes: media.sizeBytes, sha256: nil, ownerBandMemberId: nil,
             uploadState: .ready, takedownState: .active, uploadedByUserId: 1, uploadedAt: nil,
             createdAt: "", deletedAt: nil, downloadable: true

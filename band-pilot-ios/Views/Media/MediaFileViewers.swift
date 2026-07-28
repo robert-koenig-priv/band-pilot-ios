@@ -9,7 +9,7 @@ import SwiftUI
 /// seconds reads as a broken app, so the destination owns the progress.
 struct MediaFileGate: View {
     let bandId: Int
-    let song: BandSong
+    let song: Song
     let file: MediaFile
     let library: MediaLibrary
 

@@ -10,7 +10,7 @@ public final class RehearsalViewModel {
     public private(set) var rehearsals: [Rehearsal] = []
     public private(set) var selectedId: Int?
     public private(set) var detail: RehearsalDetail?
-    public private(set) var catalog: [BandSong] = []   // band songs, for the add picker
+    public private(set) var catalog: [Song] = []   // band songs, for the add picker
     public private(set) var roster: [BandMember] = []  // for the missing-members picker
 
     public var isLoading = false
@@ -34,8 +34,8 @@ public final class RehearsalViewModel {
     }
 
     /// Catalog songs not already in the selected rehearsal, by name.
-    public var availableSongs: [BandSong] {
-        let present = Set((detail?.songs ?? []).map(\.bandSongId))
+    public var availableSongs: [Song] {
+        let present = Set((detail?.songs ?? []).map(\.songId))
         return catalog.filter { !present.contains($0.id) }
             .sorted { $0.name.localizedCaseInsensitiveCompare($1.name) == .orderedAscending }
     }
@@ -160,12 +160,12 @@ public final class RehearsalViewModel {
 
     // MARK: - Setlist
 
-    public func addSong(bandSongId: Int) async {
+    public func addSong(songId: Int) async {
         guard let rehearsalId = selectedId else { return }
-        guard !(detail?.songs ?? []).contains(where: { $0.bandSongId == bandSongId }) else { return }
+        guard !(detail?.songs ?? []).contains(where: { $0.songId == songId }) else { return }
         formError = nil
         do {
-            let added = try await api.send(.addRehearsalSong(bandId: bandId, rehearsalId: rehearsalId, .init(bandSongId: bandSongId)))
+            let added = try await api.send(.addRehearsalSong(bandId: bandId, rehearsalId: rehearsalId, .init(songId: songId)))
             detail?.songs.append(added)
         } catch let apiError as APIError {
             formError = apiError.userMessage
@@ -208,7 +208,7 @@ public final class RehearsalViewModel {
                     group.addTask {
                         _ = try await self.api.send(.updateRehearsalSong(
                             bandId: self.bandId, rehearsalId: rehearsalId, songRowId: song.id,
-                            .init(bandSongId: song.bandSongId, ordering: index, details: song.details)
+                            .init(songId: song.songId, ordering: index, details: song.details)
                         ))
                     }
                 }

@@ -3,7 +3,7 @@ import BandPilotKit
 
 struct SongRow: View {
     let vm: BandDetailViewModel
-    let song: BandSong
+    let song: Song
     let isWide: Bool
     let isVotingOpen: Bool
     let onToggleVoting: () -> Void
@@ -86,7 +86,7 @@ struct StatusMark: View {
 /// Inline per-member voting, mirroring the Android voting section.
 struct VotingSection: View {
     let vm: BandDetailViewModel
-    let song: BandSong
+    let song: Song
     let isWide: Bool
 
     var body: some View {
@@ -108,7 +108,7 @@ struct VotingSection: View {
 
 struct VoteRow: View {
     let vm: BandDetailViewModel
-    let song: BandSong
+    let song: Song
     let member: BandMember
     let isWide: Bool
 

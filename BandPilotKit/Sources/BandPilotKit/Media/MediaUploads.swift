@@ -62,7 +62,7 @@ public enum MediaUploads {
                     sizeBytes: staged.sizeBytes,
                     contentMd5: staged.contentMd5,
                     sha256: staged.sha256,
-                    bandSongId: songId,
+                    songId: songId,
                     ownerBandMemberId: ownerBandMemberId,
                     acceptTerms: acceptTerms
                 )

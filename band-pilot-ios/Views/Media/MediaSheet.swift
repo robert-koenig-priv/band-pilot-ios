@@ -4,7 +4,7 @@ import BandPilotKit
 /// Lists a song's media links grouped by type. YouTube/Audio push an in-app player;
 /// Video/SoundCloud/Spotify open externally.
 struct MediaSheet: View {
-    let song: BandSong
+    let song: Song
     let links: [MediaLink]
     let bandId: Int
     let vm: BandDetailViewModel
@@ -15,7 +15,7 @@ struct MediaSheet: View {
     @Environment(\.openURL) private var openURL
     @Environment(\.dismiss) private var dismiss
 
-    init(song: BandSong, links: [MediaLink], bandId: Int, vm: BandDetailViewModel, library: MediaLibrary) {
+    init(song: Song, links: [MediaLink], bandId: Int, vm: BandDetailViewModel, library: MediaLibrary) {
         self.song = song
         self.links = links
         self.bandId = bandId

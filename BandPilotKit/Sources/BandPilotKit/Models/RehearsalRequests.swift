@@ -14,11 +14,11 @@ public struct RehearsalCloneRequest: Codable, Sendable {
 }
 
 public struct RehearsalSongRequest: Codable, Sendable {
-    public var bandSongId: Int
+    public var songId: Int
     public var ordering: Int?
     public var details: String?
-    public init(bandSongId: Int, ordering: Int? = nil, details: String? = nil) {
-        self.bandSongId = bandSongId; self.ordering = ordering; self.details = details
+    public init(songId: Int, ordering: Int? = nil, details: String? = nil) {
+        self.songId = songId; self.ordering = ordering; self.details = details
     }
 }
 

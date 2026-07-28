@@ -1,12 +1,12 @@
 import SwiftUI
 import BandPilotKit
 
-/// Song edit/details sheet — all BandSongRequest fields plus the flag-assignment section.
+/// Song edit/details sheet — all SongRequest fields plus the flag-assignment section.
 /// Fields are read-only unless the user can edit songs (ADMIN/EDITOR); flag assignment is always
 /// available (the backend only requires membership for it), matching the Android dialog.
 struct SongEditSheet: View {
     let vm: BandDetailViewModel
-    let song: BandSong
+    let song: Song
     @Environment(\.dismiss) private var dismiss
 
     @State private var name: String
@@ -21,7 +21,7 @@ struct SongEditSheet: View {
     @State private var status: SongStatus
     @State private var saving = false
 
-    init(vm: BandDetailViewModel, song: BandSong) {
+    init(vm: BandDetailViewModel, song: Song) {
         self.vm = vm
         self.song = song
         _name = State(initialValue: song.name)
@@ -97,7 +97,7 @@ struct SongEditSheet: View {
 
     private func save() async {
         saving = true
-        let request = BandSongRequest(
+        let request = SongRequest(
             name: name,
             artist: artist,
             year: year.nilIfEmpty,

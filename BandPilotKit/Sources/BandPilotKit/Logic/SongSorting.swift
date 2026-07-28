@@ -8,12 +8,12 @@ public enum SongSort: String, Sendable, CaseIterable {
 
 /// Local filtering + sorting of the cached song list (mirrors the Android page's derived list).
 public enum SongSorting {
-    public static func filtered(_ songs: [BandSong], status: SongStatus?) -> [BandSong] {
+    public static func filtered(_ songs: [Song], status: SongStatus?) -> [Song] {
         guard let status else { return songs }
         return songs.filter { $0.status == status }
     }
 
-    public static func sorted(_ songs: [BandSong], by sort: SongSort) -> [BandSong] {
+    public static func sorted(_ songs: [Song], by sort: SongSort) -> [Song] {
         switch sort {
         case .practiceOrder:
             // status rank (NEED_PRACTICE → SUGGESTED → READY_FOR_STAGE), then rating descending.
@@ -33,7 +33,7 @@ public enum SongSorting {
     }
 
     /// Filter then sort, as the page does for its visible list.
-    public static func visible(_ songs: [BandSong], status: SongStatus?, sort: SongSort) -> [BandSong] {
+    public static func visible(_ songs: [Song], status: SongStatus?, sort: SongSort) -> [Song] {
         sorted(filtered(songs, status: status), by: sort)
     }
 }

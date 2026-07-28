@@ -33,7 +33,7 @@ final class MediaCacheTests: XCTestCase {
         kind: MediaFileKind = .audio
     ) -> MediaFile {
         MediaFile(
-            id: id, bandId: 1, bandSongId: nil, name: "Track \(id)", kind: kind, mimeType: mime,
+            id: id, bandId: 1, songId: nil, name: "Track \(id)", kind: kind, mimeType: mime,
             sizeBytes: Int64(bytes.count), sha256: Digest.sha256Hex(of: bytes), ownerBandMemberId: nil,
             uploadState: .ready, takedownState: .active, uploadedByUserId: 1, uploadedAt: nil,
             createdAt: "", deletedAt: nil, downloadable: true
@@ -99,7 +99,7 @@ final class MediaCacheTests: XCTestCase {
         let bytes = Data("x".utf8)
         var media = file(id: 7, bytes: bytes)
         media = MediaFile(
-            id: media.id, bandId: media.bandId, bandSongId: nil, name: media.name, kind: media.kind,
+            id: media.id, bandId: media.bandId, songId: nil, name: media.name, kind: media.kind,
             mimeType: media.mimeType, sizeBytes: media.sizeBytes, sha256: nil, ownerBandMemberId: nil,
             uploadState: .ready, takedownState: .active, uploadedByUserId: 1, uploadedAt: nil,
             createdAt: "", deletedAt: nil, downloadable: true

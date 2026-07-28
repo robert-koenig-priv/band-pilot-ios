@@ -33,7 +33,7 @@ public struct MessageResponse: Codable, Sendable {
 }
 
 /// Body of `PUT .../songs/{id}`. artist is required by the backend (non-null).
-public struct BandSongRequest: Codable, Sendable {
+public struct SongRequest: Codable, Sendable {
     public var name: String
     public var artist: String
     public var year: String?

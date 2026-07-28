@@ -51,10 +51,10 @@ extension Endpoint {
     public static func flags(bandId: Int) -> Endpoint<[Flag]> {
         .init(method: .get, path: "api/bands/\(bandId)/flags")
     }
-    public static func songsWithRatings(bandId: Int) -> Endpoint<[BandSongWithRatings]> {
+    public static func songsWithRatings(bandId: Int) -> Endpoint<[SongWithRatings]> {
         .init(method: .get, path: "api/bands/\(bandId)/songs-with-ratings")
     }
-    public static func updateSong(bandId: Int, songId: Int, _ req: BandSongRequest) -> Endpoint<BandSong> {
+    public static func updateSong(bandId: Int, songId: Int, _ req: SongRequest) -> Endpoint<Song> {
         .init(method: .put, path: "api/bands/\(bandId)/songs/\(songId)", body: req)
     }
     public static func createRating(bandId: Int, songId: Int, _ req: RatingCreateRequest) -> Endpoint<SongRating> {
@@ -66,7 +66,7 @@ extension Endpoint {
     public static func deleteRating(bandId: Int, songId: Int, ratingId: Int) -> Endpoint<EmptyResponse> {
         .init(method: .delete, path: "api/bands/\(bandId)/songs/\(songId)/ratings/\(ratingId)")
     }
-    public static func createFlag(bandId: Int, songId: Int, _ req: FlagCreateRequest) -> Endpoint<BandSongFlag> {
+    public static func createFlag(bandId: Int, songId: Int, _ req: FlagCreateRequest) -> Endpoint<SongFlag> {
         .init(method: .post, path: "api/bands/\(bandId)/songs/\(songId)/flags", body: req)
     }
     public static func deleteFlag(bandId: Int, songId: Int, flagAssignmentId: Int) -> Endpoint<EmptyResponse> {

@@ -24,7 +24,7 @@ public enum MediaType: String, Codable, Sendable, Hashable, CaseIterable {
 /// A named, typed link on a song (`GET .../songs/{id}/media-links`).
 public struct MediaLink: Codable, Sendable, Identifiable, Hashable {
     public let id: Int
-    public let bandSongId: Int
+    public let songId: Int
     public let name: String
     public let mediaType: MediaType
     public let url: String

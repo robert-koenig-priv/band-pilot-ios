@@ -9,9 +9,9 @@ import Observation
 public final class BandDetailViewModel {
     // Cache
     public private(set) var band: Band?
-    public private(set) var songs: [BandSong] = []
+    public private(set) var songs: [Song] = []
     public private(set) var ratings: [Int: [SongRating]] = [:]   // keyed by songId
-    public private(set) var flags: [Int: [BandSongFlag]] = [:]   // keyed by songId
+    public private(set) var flags: [Int: [SongFlag]] = [:]   // keyed by songId
     public private(set) var flagCatalog: [Flag] = []
     public private(set) var mediaLinks: [Int: [MediaLink]] = [:]   // keyed by songId (lazily loaded)
 
@@ -54,7 +54,7 @@ public final class BandDetailViewModel {
     public var statusFilter: SongStatus?
     public var sort: SongSort = .practiceOrder
 
-    public var visibleSongs: [BandSong] {
+    public var visibleSongs: [Song] {
         SongSorting.visible(songs, status: statusFilter, sort: sort)
     }
 
@@ -160,7 +160,7 @@ public final class BandDetailViewModel {
     public func loadMediaFiles(library: MediaLibrary?) async {
         do {
             let files = try await api.send(.mediaFiles(bandId: bandId))
-            mediaFiles = Dictionary(grouping: files) { $0.bandSongId ?? Self.bandLevelFilesKey }
+            mediaFiles = Dictionary(grouping: files) { $0.songId ?? Self.bandLevelFilesKey }
             mediaFilesSupported = true
             // only ever with a SUCCESSFUL list: an empty one must not be read as "all gone"
             library?.reconcile(with: files)
@@ -174,7 +174,7 @@ public final class BandDetailViewModel {
 
     /// Patch state from a write response instead of re-fetching, as ratings and flags already do.
     public func fileChanged(_ file: MediaFile) {
-        let key = file.bandSongId ?? Self.bandLevelFilesKey
+        let key = file.songId ?? Self.bandLevelFilesKey
         for (songId, list) in mediaFiles {
             mediaFiles[songId] = list.filter { $0.id != file.id }
         }
@@ -230,7 +230,7 @@ public final class BandDetailViewModel {
     // MARK: - Song edit
 
     @discardableResult
-    public func updateSong(songId: Int, request: BandSongRequest) async -> Bool {
+    public func updateSong(songId: Int, request: SongRequest) async -> Bool {
         formError = nil
         do {
             var updated = try await api.send(.updateSong(bandId: bandId, songId: songId, request))
