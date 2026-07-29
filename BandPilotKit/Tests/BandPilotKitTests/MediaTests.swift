@@ -13,6 +13,34 @@ final class MediaTests: XCTestCase {
         XCTAssertEqual(links[0].mediaType, .youtube)
         XCTAssertTrue(links[0].mediaType.playsInApp)
         XCTAssertFalse(links[2].mediaType.playsInApp)
+        // no owner key at all: a backend older than the column must still decode, not throw
+        XCTAssertNil(links[0].ownerBandMemberId)
+    }
+
+    func testDecodeMediaLinkOwner() throws {
+        let json = """
+        [{"id":1,"songId":8,"name":"Mine","mediaType":"AUDIO","url":"https://e/x.mp3","ownerBandMemberId":7},
+         {"id":2,"songId":8,"name":"Band's","mediaType":"AUDIO","url":"https://e/y.mp3","ownerBandMemberId":null}]
+        """
+        let links = try JSONDecoder().decode([MediaLink].self, from: Data(json.utf8))
+        XCTAssertEqual(links[0].ownerBandMemberId, 7)
+        // explicit null is the band, indistinguishable from the key being absent
+        XCTAssertNil(links[1].ownerBandMemberId)
+    }
+
+    /// The same filter now spans links and files, so it has to behave identically on a link.
+    func testOwnerFilterOnLinks() throws {
+        let json = """
+        [{"id":1,"songId":8,"name":"Mine","mediaType":"AUDIO","url":"https://e/1","ownerBandMemberId":5},
+         {"id":2,"songId":8,"name":"Band's","mediaType":"AUDIO","url":"https://e/2"},
+         {"id":3,"songId":8,"name":"Theirs","mediaType":"AUDIO","url":"https://e/3","ownerBandMemberId":9}]
+        """
+        let links = try JSONDecoder().decode([MediaLink].self, from: Data(json.utf8))
+        let mine = MediaOwnerFilter.mineAndBand
+        XCTAssertEqual(links.filter { mine.includes($0, myBandMemberId: 5) }.map(\.id), [1, 2])
+        XCTAssertEqual(links.filter { MediaOwnerFilter.everyone.includes($0, myBandMemberId: 5) }.map(\.id), [1, 2, 3])
+        // no roster entry means no "mine", so hiding anything would just look like data loss
+        XCTAssertEqual(links.filter { mine.includes($0, myBandMemberId: nil) }.map(\.id), [1, 2, 3])
     }
 
     func testYouTubeVideoIdParsing() {

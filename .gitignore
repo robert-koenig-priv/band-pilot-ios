@@ -3,6 +3,11 @@
 .swiftpm/
 Package.resolved.tmp
 
+# Build output. `.build/` above is SwiftPM's own default; this catches the undotted `build/` that
+# `swift build/test --scratch-path build` and an xcodebuild SYMROOT leave behind, at the repo root and
+# inside BandPilotKit alike — ~730 files that have no business in the history.
+build/
+
 # Xcode
 DerivedData/
 *.xcuserstate

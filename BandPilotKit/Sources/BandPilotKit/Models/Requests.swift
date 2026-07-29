@@ -76,6 +76,38 @@ public struct FlagCreateRequest: Codable, Sendable {
     }
 }
 
+/// A media link write.
+///
+/// A full replace, like the backend's other PUTs, so every field is re-sent even when only
+/// ``ownerBandMemberId`` is changing — build it from the link you already hold rather than from a form.
+///
+/// `ownerBandMemberId` nil hands the link to the whole band. The backend refuses any value that is
+/// neither nil nor the caller's own roster entry, unless the caller is an editor or admin, so the app
+/// only ever offers those two.
+public struct MediaLinkRequest: Codable, Sendable {
+    public let name: String
+    public let mediaType: MediaType
+    public let url: String
+    public let ownerBandMemberId: Int?
+    public init(name: String, mediaType: MediaType, url: String, ownerBandMemberId: Int? = nil) {
+        self.name = name; self.mediaType = mediaType; self.url = url
+        self.ownerBandMemberId = ownerBandMemberId
+    }
+}
+
+/// A media file metadata write — the bytes are immutable, so only the labels can change. See
+/// ``MediaLinkRequest`` on why the whole thing is re-sent.
+public struct MediaFileUpdateRequest: Codable, Sendable {
+    public let name: String
+    public let kind: MediaFileKind
+    public let songId: Int?
+    public let ownerBandMemberId: Int?
+    public init(name: String, kind: MediaFileKind, songId: Int? = nil, ownerBandMemberId: Int? = nil) {
+        self.name = name; self.kind = kind; self.songId = songId
+        self.ownerBandMemberId = ownerBandMemberId
+    }
+}
+
 /// Sentinel for endpoints returning 204 / no body.
 public struct EmptyResponse: Codable, Sendable {
     public init() {}

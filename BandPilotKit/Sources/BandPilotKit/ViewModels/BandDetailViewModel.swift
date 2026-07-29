@@ -189,6 +189,54 @@ public final class BandDetailViewModel {
             mediaFiles[songId] = list.filter { $0.id != file.id }
         }
     }
+
+    /// Re-tag a file: `owner` nil hands it to the whole band, otherwise it must be the logged-in user's
+    /// own roster entry — the backend refuses anything else for a plain member, and the app never offers
+    /// it.
+    ///
+    /// A full replace on the wire, so the file's own name, kind and song are re-sent unchanged; a partial
+    /// body would clear them.
+    public func setFileOwner(_ file: MediaFile, to owner: Int?) async {
+        let req = MediaFileUpdateRequest(
+            name: file.name,
+            kind: file.kind,
+            songId: file.songId,
+            ownerBandMemberId: owner
+        )
+        guard let updated = try? await api.send(
+            .updateMediaFile(bandId: bandId, fileId: file.id, req)
+        ) else { return }
+        for (songId, list) in mediaFiles {
+            mediaFiles[songId] = list.map { $0.id == updated.id ? updated : $0 }
+        }
+    }
+
+    /// ⚠️ Permanent: a link has no restore, unlike a file. The UI says so before calling this.
+    public func deleteLink(_ link: MediaLink) async {
+        guard (try? await api.send(
+            .deleteMediaLink(bandId: bandId, songId: link.songId, linkId: link.id)
+        )) != nil else { return }
+        for (songId, list) in mediaLinks {
+            mediaLinks[songId] = list.filter { $0.id != link.id }
+        }
+    }
+
+    /// Re-tag a link; see ``setFileOwner(_:to:)`` for why the whole link is re-sent.
+    public func setLinkOwner(_ link: MediaLink, to owner: Int?) async {
+        let req = MediaLinkRequest(
+            name: link.name,
+            mediaType: link.mediaType,
+            url: link.url,
+            ownerBandMemberId: owner
+        )
+        guard let updated = try? await api.send(
+            .updateMediaLink(bandId: bandId, songId: link.songId, linkId: link.id, req)
+        ) else { return }
+        for (songId, list) in mediaLinks {
+            mediaLinks[songId] = list.map { $0.id == updated.id ? updated : $0 }
+        }
+    }
+
     public func media(for songId: Int) -> [MediaLink] { mediaLinks[songId] ?? [] }
 
     /// Fetch a song's media links once (called as rows appear). No-ops if already loaded/in-flight.

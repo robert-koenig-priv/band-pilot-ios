@@ -1,14 +1,23 @@
 import SwiftUI
 import BandPilotKit
 
+/// The shared demo login, filled in so a tester can get into the demo band without being sent
+/// credentials separately.
+///
+/// Deliberately public: it ships inside the app bundle and is readable by anyone who unpacks it.
+/// That is the point — but it also means the account must stay confined to the demo band and hold
+/// nothing that would matter if a stranger changed it.
+private let demoEmail = "john.doe@bandpilot.net"
+private let demoPassword = "bandpilot"
+
 /// Combined sign-in / register screen (mirrors the Android AuthScreen). Blue actions here rather
 /// than the pink brand accent — a field/button you're just signing in with reads oddly in red.
 struct AuthView: View {
     @State private var vm: AuthViewModel
     @State private var firstName = ""
     @State private var lastName = ""
-    @State private var email = ""
-    @State private var password = ""
+    @State private var email = demoEmail
+    @State private var password = demoPassword
     @State private var showForgotSheet = false
     @State private var forgotEmail = ""
 
@@ -48,6 +57,14 @@ struct AuthView: View {
                         if let error = vm.error { ErrorBanner(message: error) }
                         if let info = vm.info { InfoBanner(message: info) }
 
+                        // A password already in the box is confusing unless it says whose it is.
+                        if !registerMode && email == demoEmail {
+                            Text("Filled in with the demo account — press Sign in to look around the demo band, or type your own details over it.")
+                                .font(.footnote)
+                                .foregroundStyle(Palette.textDim)
+                                .frame(maxWidth: .infinity, alignment: .leading)
+                        }
+
                         if registerMode {
                             HStack(spacing: 10) {
                                 LabeledField(label: "First name", text: $firstName, autocapitalization: .words)
@@ -77,6 +94,16 @@ struct AuthView: View {
 
                         Button {
                             vm.toggleMode()
+                            // Registering means creating your own account, so the demo credentials
+                            // must not come along; going back to sign-in restores them, which is
+                            // the point of prefilling in the first place.
+                            if registerMode {
+                                email = ""
+                                password = ""
+                            } else {
+                                email = demoEmail
+                                password = demoPassword
+                            }
                         } label: {
                             Text(registerMode ? "Already have an account? Sign in" : "No account yet? Register")
                                 .foregroundStyle(Palette.selected)
