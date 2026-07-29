@@ -12,6 +12,10 @@ struct MediaSheet: View {
     @State private var path: [MediaLink]
     @State private var openedFile: MediaFile?
     @State private var showUpload = false
+    /// The item a delete has been asked for but not yet confirmed. One optional per kind rather than one
+    /// enum, because the confirmation wording differs: a file is recoverable, a link is not.
+    @State private var confirmingLink: MediaLink?
+    @State private var confirmingFile: MediaFile?
     @Environment(\.openURL) private var openURL
     @Environment(\.dismiss) private var dismiss
 
@@ -35,13 +39,21 @@ struct MediaSheet: View {
         #endif
     }
 
+    /// Links carry the same owner tag as files, so the one filter governs both lists.
+    private var visibleLinks: [MediaLink] {
+        links.filter { vm.ownerFilter.includes($0, myBandMemberId: vm.myBandMemberId) }
+    }
+
     private var grouped: [(type: MediaType, items: [MediaLink])] {
         MediaType.allCases.compactMap { type in
-            let items = links.filter { $0.mediaType == type }
+            let items = visibleLinks.filter { $0.mediaType == type }
             return items.isEmpty ? nil : (type, items)
         }
     }
-    private var youtubeLinks: [MediaLink] { links.filter { $0.mediaType == .youtube } }
+
+    /// The player's up-next list, which must match what the list actually offered — otherwise swiping
+    /// on inside the player produces a video the sheet had filtered away.
+    private var youtubeLinks: [MediaLink] { visibleLinks.filter { $0.mediaType == .youtube } }
 
     var body: some View {
         NavigationStack(path: $path) {
@@ -62,17 +74,7 @@ struct MediaSheet: View {
                         Section {
                             ForEach(group.items) { file in fileRow(file) }
                         } header: {
-                            HStack {
-                                Text(group.kind.label).foregroundStyle(Palette.textDim)
-                                if showOwnerFilter {
-                                    Spacer()
-                                    Button(vm.ownerFilter.label) {
-                                        vm.ownerFilter = vm.ownerFilter == .mineAndBand ? .everyone : .mineAndBand
-                                    }
-                                    .font(.caption)
-                                    .foregroundStyle(Palette.accent)
-                                }
-                            }
+                            Text(group.kind.label).foregroundStyle(Palette.textDim)
                         }
                     }
 
@@ -96,6 +98,17 @@ struct MediaSheet: View {
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) { Button("Done") { dismiss() } }
+                // One control for the whole sheet. It used to sit in each file-kind section header, which
+                // worked while files were the only owned thing; now that links are owned too it would
+                // repeat across up to eight headers and read as eight separate filters.
+                if showOwnerFilter {
+                    ToolbarItem(placement: .primaryAction) {
+                        Button(vm.ownerFilter.label) {
+                            vm.ownerFilter = vm.ownerFilter == .mineAndBand ? .everyone : .mineAndBand
+                        }
+                        .foregroundStyle(Palette.accent)
+                    }
+                }
             }
             .navigationDestination(for: MediaLink.self) { link in
                 switch link.mediaType {
@@ -117,6 +130,40 @@ struct MediaSheet: View {
             .sheet(isPresented: $showUpload) {
                 MediaUploadSheet(bandId: bandId, song: song, vm: vm, library: library)
             }
+            // Two confirmations rather than one, because the consequence differs and that difference is
+            // the whole of the user's decision: a file comes back, a link does not.
+            .confirmationDialog(
+                "Delete \(confirmingLink?.name ?? "")?",
+                isPresented: .init(get: { confirmingLink != nil }, set: { if !$0 { confirmingLink = nil } }),
+                titleVisibility: .visible
+            ) {
+                Button("Delete", role: .destructive) {
+                    if let link = confirmingLink { Task { await vm.deleteLink(link) } }
+                    confirmingLink = nil
+                }
+                Button("Cancel", role: .cancel) { confirmingLink = nil }
+            } message: {
+                Text(
+                    "This link will be gone for good — there is no undo. The page it points at is "
+                        + "unaffected, so it can be added again."
+                )
+            }
+            .confirmationDialog(
+                "Delete \(confirmingFile?.name ?? "")?",
+                isPresented: .init(get: { confirmingFile != nil }, set: { if !$0 { confirmingFile = nil } }),
+                titleVisibility: .visible
+            ) {
+                Button("Delete", role: .destructive) {
+                    if let file = confirmingFile { Task { await vm.deleteFile(file, library: library) } }
+                    confirmingFile = nil
+                }
+                Button("Cancel", role: .cancel) { confirmingFile = nil }
+            } message: {
+                Text(
+                    "This removes the file from the band's list. An admin can still restore it for a "
+                        + "while before its contents are deleted from storage for good."
+                )
+            }
         }
         .tint(Palette.selected)
     }
@@ -132,11 +179,20 @@ struct MediaSheet: View {
         }
     }
 
-    /// Only offered when it would change what is on screen — otherwise it is permanent noise.
+    /// Only offered when it would change what is on screen — otherwise it is permanent noise. Weighed
+    /// against the *unfiltered* lists, so switching to "Mine" cannot make the button that switches back
+    /// disappear.
     private var showOwnerFilter: Bool {
         guard let mine = vm.myBandMemberId else { return false }
-        return vm.files(for: song.id).contains { $0.ownerBandMemberId != nil && $0.ownerBandMemberId != mine }
+        let someoneElses = { (owner: Int?) in owner != nil && owner != mine }
+        return vm.files(for: song.id).contains { someoneElses($0.ownerBandMemberId) }
+            || links.contains { someoneElses($0.ownerBandMemberId) }
     }
+
+    /// Role only — deliberately NOT ``canUpload``, which additionally requires a configured bucket.
+    /// Re-tagging and deleting a *link* touch no storage at all, so gating them on the bucket would leave
+    /// a band that has not set one up unable to tidy its own YouTube links.
+    private var canManageMedia: Bool { Permissions.canUploadMedia(vm.myRole) }
 
     private var canUpload: Bool {
         vm.mediaFilesSupported
@@ -172,6 +228,15 @@ struct MediaSheet: View {
             }
         }
         .listRowBackground(Palette.bgCard)
+        .mediaItemActions(
+            enabled: canManageMedia,
+            label: file.name,
+            ownedByMe: file.ownerBandMemberId != nil && file.ownerBandMemberId == vm.myBandMemberId,
+            canClaim: vm.myBandMemberId != nil,
+            onSetOwner: { owner in Task { await vm.setFileOwner(file, to: owner) } },
+            myBandMemberId: vm.myBandMemberId,
+            onDeleteRequested: { confirmingFile = file }
+        )
     }
 
     private func subtitle(for file: MediaFile) -> String {
@@ -179,10 +244,15 @@ struct MediaSheet: View {
         let size = mb >= 0.1 ? String(format: "%.1f MB", mb) : "\(file.sizeBytes / 1024) KB"
         if case .failed(let message) = library.state(for: file) { return message }
         if case .unavailable = library.state(for: file) { return "No longer available" }
-        guard let owner = file.ownerBandMemberId,
-              let nick = vm.roster.first(where: { $0.id == owner })?.nickName
-        else { return size }
+        guard let nick = ownerNick(file.ownerBandMemberId) else { return size }
         return "\(size) · for \(nick)"
+    }
+
+    /// Whose it is, or nil for the band's own — and also nil for an owner no longer on the roster, where
+    /// "for Unknown" would be worse than saying nothing.
+    private func ownerNick(_ ownerBandMemberId: Int?) -> String? {
+        guard let owner = ownerBandMemberId else { return nil }
+        return vm.roster.first(where: { $0.id == owner })?.nickName
     }
 
     private func fileIcon(_ file: MediaFile) -> String {
@@ -196,27 +266,42 @@ struct MediaSheet: View {
     }
 
     @ViewBuilder private func row(_ type: MediaType, _ link: MediaLink) -> some View {
-        if type.playsInApp {
-            NavigationLink(value: link) { label(type, link) }
-                .listRowBackground(Palette.bgCard)
-        } else {
-            Button {
-                if let url = URL(string: link.url.trimmingCharacters(in: .whitespaces)) { openURL(url) }
-            } label: {
-                HStack {
-                    label(type, link)
-                    Spacer()
-                    Image(systemName: "arrow.up.right.square").foregroundStyle(Palette.textDim)
+        Group {
+            if type.playsInApp {
+                NavigationLink(value: link) { label(type, link) }
+            } else {
+                Button {
+                    if let url = URL(string: link.url.trimmingCharacters(in: .whitespaces)) { openURL(url) }
+                } label: {
+                    HStack {
+                        label(type, link)
+                        Spacer()
+                        Image(systemName: "arrow.up.right.square").foregroundStyle(Palette.textDim)
+                    }
                 }
             }
-            .listRowBackground(Palette.bgCard)
         }
+        .listRowBackground(Palette.bgCard)
+        .mediaItemActions(
+            enabled: canManageMedia,
+            label: link.name,
+            ownedByMe: link.ownerBandMemberId != nil && link.ownerBandMemberId == vm.myBandMemberId,
+            canClaim: vm.myBandMemberId != nil,
+            onSetOwner: { owner in Task { await vm.setLinkOwner(link, to: owner) } },
+            myBandMemberId: vm.myBandMemberId,
+            onDeleteRequested: { confirmingLink = link }
+        )
     }
 
     private func label(_ type: MediaType, _ link: MediaLink) -> some View {
         HStack(spacing: 10) {
             Image(systemName: icon(type)).foregroundStyle(Palette.selected).frame(width: 22)
-            Text(link.name).foregroundStyle(Palette.text)
+            VStack(alignment: .leading, spacing: 2) {
+                Text(link.name).foregroundStyle(Palette.text)
+                if let nick = ownerNick(link.ownerBandMemberId) {
+                    Text("for \(nick)").font(.caption).foregroundStyle(Palette.textDim)
+                }
+            }
         }
     }
 

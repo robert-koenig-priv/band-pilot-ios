@@ -77,7 +77,7 @@ public enum TakedownState: String, Codable, Sendable, Hashable {
 ///
 /// Distinct from ``MediaLink``, which is only a URL. These are real bytes the app downloads, verifies
 /// and caches for offline use.
-public struct MediaFile: Codable, Sendable, Identifiable, Hashable {
+public struct MediaFile: Codable, Sendable, Identifiable, Hashable, MediaOwnable {
     public let id: Int
     public let bandId: Int
     public let songId: Int?
@@ -214,11 +214,11 @@ public struct MediaUploadPolicy: Codable, Sendable {
     public func maxBytes(for kind: MediaFileKind) -> Int64? { maxBytesByKind[kind.rawValue] }
 }
 
-/// Whose files the panel shows.
+/// Whose material the panel shows — files and links alike, since both carry the same owner tag.
 ///
-/// ``mineAndBand`` means "owned by me **plus** the band's own files" — it never hides band-level
-/// material, only another member's personal variant. A login with no roster entry has no "mine", so the
-/// UI shows everyone's rather than an inexplicably short list.
+/// ``mineAndBand`` means "owned by me **plus** the band's own" — it never hides band-level material,
+/// only another member's personal variant. A login with no roster entry has no "mine", so the UI shows
+/// everyone's rather than an inexplicably short list.
 public enum MediaOwnerFilter: Sendable, CaseIterable {
     case mineAndBand
     case everyone
@@ -230,12 +230,12 @@ public enum MediaOwnerFilter: Sendable, CaseIterable {
         }
     }
 
-    public func includes(_ file: MediaFile, myBandMemberId: Int?) -> Bool {
+    public func includes(_ item: some MediaOwnable, myBandMemberId: Int?) -> Bool {
         switch self {
         case .everyone: return true
         case .mineAndBand:
             guard let mine = myBandMemberId else { return true }
-            return file.ownerBandMemberId == nil || file.ownerBandMemberId == mine
+            return item.ownerBandMemberId == nil || item.ownerBandMemberId == mine
         }
     }
 }

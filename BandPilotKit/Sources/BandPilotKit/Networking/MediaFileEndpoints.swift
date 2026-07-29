@@ -34,4 +34,14 @@ extension Endpoint {
     public static func deleteMediaFile(bandId: Int, fileId: Int) -> Endpoint<EmptyResponse> {
         .init(method: .delete, path: "api/bands/\(bandId)/media-files/\(fileId)")
     }
+
+    /// Change a file's labels — its name, kind, song or owner. The bytes are immutable, and so is the
+    /// object's location in the bucket: re-tagging does not move it.
+    public static func updateMediaFile(
+        bandId: Int,
+        fileId: Int,
+        _ req: MediaFileUpdateRequest
+    ) -> Endpoint<MediaFile> {
+        .init(method: .put, path: "api/bands/\(bandId)/media-files/\(fileId)", body: req)
+    }
 }
