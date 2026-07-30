@@ -112,6 +112,24 @@ struct ErrorBanner: View {
     }
 }
 
+/// Initials in a circle — the drawer's user row. Mirrors the Android app's `Avatar`; the app has no
+/// photos in its model at all, so initials are the whole of it.
+struct Avatar: View {
+    let initials: String
+    var size: CGFloat = 40
+
+    var body: some View {
+        ZStack {
+            Circle().fill(Palette.bgSoft)
+            Circle().stroke(Palette.line, lineWidth: 1)
+            Text(initials)
+                .font(.system(size: size * 0.36, weight: .bold))
+                .foregroundStyle(Palette.textDim)
+        }
+        .frame(width: size, height: size)
+    }
+}
+
 /// Green sibling of ErrorBanner (the "check your email" hint).
 struct InfoBanner: View {
     let message: String

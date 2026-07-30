@@ -37,6 +37,11 @@ struct SongsView: View {
         .drawerToolbar(shell)
         .task {
             await vm.load()
+            // The drawer's band heading, refreshed from the page that actually fetched the band.
+            // BandsView already supplies the name on tap, so this is normally a no-op — but a deep
+            // link (BP_OPEN_BAND) arrives with no name at all, and Android likewise shows the name
+            // as soon as its own fetch lands rather than leaving the "BAND" placeholder up.
+            if let name = vm.band?.name { shell.rememberBand(id: vm.bandId, name: name) }
             // one band-scoped call; a 404 degrades to links-only rather than erroring
             await vm.loadMediaFiles(library: library)
             #if DEBUG
