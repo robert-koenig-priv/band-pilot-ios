@@ -5,13 +5,15 @@ struct BandsView: View {
     let session: SessionStore
     let api: APIClient
     let library: MediaLibrary
+    let shell: ShellState
     @State private var vm: BandsViewModel
     @State private var showStorage = false
 
-    init(session: SessionStore, api: APIClient, library: MediaLibrary) {
+    init(session: SessionStore, api: APIClient, library: MediaLibrary, shell: ShellState) {
         self.library = library
         self.session = session
         self.api = api
+        self.shell = shell
         _vm = State(wrappedValue: BandsViewModel(api: api))
     }
 
@@ -34,6 +36,7 @@ struct BandsView: View {
                 }
             }
         }
+        .drawerToolbar(shell)
         .task { await vm.load() }
         .navigationDestination(isPresented: $showStorage) { MediaStorageView(library: library) }
     }

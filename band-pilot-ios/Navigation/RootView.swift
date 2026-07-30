@@ -13,7 +13,10 @@ struct RootView: View {
     var body: some View {
         Group {
             if session.isAuthenticated {
-                MainNavigation(session: session, api: api, library: library)
+                AppShell(session: session, api: api, library: library)
+                    // Android wraps its content in key(user.id) so a re-login cannot inherit the
+                    // previous account's navigation state. Same guard, same reason.
+                    .id(session.user?.id)
             } else {
                 AuthView(session: session, api: api)
             }
@@ -41,47 +44,3 @@ struct RootView: View {
     }
 }
 
-struct MainNavigation: View {
-    let session: SessionStore
-    let api: APIClient
-    let library: MediaLibrary
-    @State private var path: [AppRoute]
-
-    init(session: SessionStore, api: APIClient, library: MediaLibrary) {
-        self.session = session
-        self.api = api
-        self.library = library
-        #if DEBUG
-        let env = ProcessInfo.processInfo.environment
-        if let raw = env["BP_OPEN_BAND"], let id = Int(raw) {
-            var initial: [AppRoute] = [.songs(bandId: id)]
-            if env["BP_OPEN_REHEARSALS"] == "1" { initial.append(.rehearsals(bandId: id)) }
-            _path = State(initialValue: initial)
-        } else {
-            _path = State(initialValue: [])
-        }
-        #else
-        _path = State(initialValue: [])
-        #endif
-    }
-
-    var body: some View {
-        NavigationStack(path: $path) {
-            BandsView(session: session, api: api, library: library)
-                .navigationDestination(for: AppRoute.self) { route in
-                    switch route {
-                    case let .songs(bandId):
-                        SongsView(
-                            bandId: bandId,
-                            currentUserId: session.user?.id ?? 0,
-                            api: api,
-                            library: library
-                        )
-                    case let .rehearsals(bandId):
-                        RehearsalView(bandId: bandId, api: api)
-                    }
-                }
-        }
-        .tint(Palette.selected)
-    }
-}

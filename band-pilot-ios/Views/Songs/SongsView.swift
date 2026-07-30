@@ -4,14 +4,16 @@ import BandPilotKit
 struct SongsView: View {
     @State private var vm: BandDetailViewModel
     let library: MediaLibrary
+    let shell: ShellState
     @Environment(\.isWide) private var isWide
 
     @State private var editingSong: Song?
     @State private var votingSongId: Int?
     @State private var mediaSong: Song?
 
-    init(bandId: Int, currentUserId: Int, api: APIClient, library: MediaLibrary) {
+    init(bandId: Int, currentUserId: Int, api: APIClient, library: MediaLibrary, shell: ShellState) {
         self.library = library
+        self.shell = shell
         _vm = State(wrappedValue: BandDetailViewModel(bandId: bandId, currentUserId: currentUserId, api: api))
     }
 
@@ -32,6 +34,7 @@ struct SongsView: View {
                 Text("\(vm.visibleSongs.count)").foregroundStyle(Palette.textDim)
             }
         }
+        .drawerToolbar(shell)
         .task {
             await vm.load()
             // one band-scoped call; a 404 degrades to links-only rather than erroring
