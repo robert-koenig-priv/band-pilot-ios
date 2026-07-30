@@ -16,7 +16,8 @@ struct RehearsalView: View {
             Palette.bg.ignoresSafeArea()
             content
         }
-        .navigationTitle("Rehearsals")
+        // Singular, matching the drawer item and Android's own Destination label.
+        .navigationTitle("Rehearsal")
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
             ToolbarItem(placement: .topBarTrailing) { EditButton() }

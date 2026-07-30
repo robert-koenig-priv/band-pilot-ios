@@ -22,14 +22,11 @@ struct SongsView: View {
             Palette.bg.ignoresSafeArea()
             content
         }
-        .navigationTitle(vm.band?.name ?? "Songs")
+        // The page label, as Android's bar shows — the band name lives in the drawer's band section.
+        // This is the nav-bar width the songs control bars need.
+        .navigationTitle("Songs")
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
-            ToolbarItem(placement: .topBarTrailing) {
-                NavigationLink(value: AppRoute.rehearsals(bandId: vm.bandId)) {
-                    Image(systemName: "calendar")
-                }
-            }
             ToolbarItem(placement: .topBarTrailing) {
                 Text("\(vm.visibleSongs.count)").foregroundStyle(Palette.textDim)
             }
