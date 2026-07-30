@@ -73,6 +73,10 @@ struct AppShell: View {
             state.isDrawerOpen = true
             seeded = true
         }
+        if let raw = env["BP_OPEN_SHEET"], let sheet = ShellSheet(rawValue: raw) {
+            state.sheet = sheet
+            seeded = true
+        }
         if seeded { _shell = State(wrappedValue: state) }
         #endif
     }
@@ -121,9 +125,9 @@ struct AppShell: View {
             case .storage:
                 NavigationStack { MediaStorageView(library: library) }
             case .about:
-                Text("About")            // Task 4
+                AboutSheet()
             case .managementSite:
-                Text("BandPilot Web")    // Task 4
+                ManagementSiteSheet()
             }
         }
     }
