@@ -36,11 +36,14 @@ struct SongsView: View {
         )
     }
 
-    private func groupKeys(for song: Song) -> [String] {
+    /// `flagOrder` is threaded in rather than read from `flagsInUse` here, because this runs once per
+    /// song inside `groupSongs`'s scan — re-deriving the dedup'd/sorted flag list on every call would
+    /// make grouping O(n²) in the song count.
+    private func groupKeys(for song: Song, flagOrder: [Int]) -> [String] {
         guard let groupBy = header.groupBy else { return [] }
         return SongGrouping.groupKeys(
             for: song, by: groupBy, flags: vm.flags[song.id] ?? [],
-            flagOrder: flagsInUse.map(\.id), rating: groupRating(song)
+            flagOrder: flagOrder, rating: groupRating(song)
         )
     }
 
@@ -50,10 +53,12 @@ struct SongsView: View {
         return Double(vm.individualRating(songId: song.id, memberId: me))
     }
 
-    private var groups: [SongGroup] {
+    private func groups(for songs: [Song]) -> [SongGroup] {
         guard let groupBy = header.groupBy else { return [] }
+        let flagOrder = flagsInUse.map(\.id)
         return SongGrouping.groupSongs(
-            derivedSongs, by: groupBy, flagsInUse: flagsInUse, keysOf: groupKeys(for:)
+            songs, by: groupBy, flagsInUse: flagsInUse,
+            keysOf: { self.groupKeys(for: $0, flagOrder: flagOrder) }
         )
     }
 
@@ -64,9 +69,12 @@ struct SongsView: View {
     }
 
     var body: some View {
+        // Hoisted once per body pass: computed by `derivedSongs` above, but re-deriving it separately
+        // for the nav-bar count and for the list would filter/sort the song list twice per render.
+        let songs = derivedSongs
         ZStack {
             Palette.bg.ignoresSafeArea()
-            content
+            content(derivedSongs: songs)
         }
         // No title: back chevron + hamburger + count + Reset fill the bar; the five toggles live in
         // their own full-width row instead (see SongHeaderToggles) — the nav bar could not fit them.
@@ -74,7 +82,7 @@ struct SongsView: View {
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
             ToolbarItem(placement: .topBarTrailing) {
-                Text("\(derivedSongs.count)").foregroundStyle(Palette.textDim)
+                Text("\(songs.count)").foregroundStyle(Palette.textDim)
             }
             ToolbarItem(placement: .topBarTrailing) {
                 Button { header.reset() } label: { Image(systemName: "arrow.counterclockwise") }
@@ -141,7 +149,7 @@ struct SongsView: View {
         Divider().overlay(Palette.line)
     }
 
-    @ViewBuilder private var content: some View {
+    @ViewBuilder private func content(derivedSongs: [Song]) -> some View {
         if vm.isLoading && vm.songs.isEmpty {
             ProgressView().tint(Palette.textDim)
         } else if let error = vm.error, vm.songs.isEmpty {
@@ -163,7 +171,7 @@ struct SongsView: View {
                             if header.groupBy == nil {
                                 ForEach(derivedSongs) { song in songRow(song) }
                             } else {
-                                ForEach(groups) { group in
+                                ForEach(groups(for: derivedSongs)) { group in
                                     GroupHeader(
                                         group: group,
                                         collapsed: !header.expandedGroups.contains(group.key),

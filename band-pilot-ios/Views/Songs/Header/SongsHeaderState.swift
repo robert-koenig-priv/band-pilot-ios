@@ -258,5 +258,13 @@ final class SongsHeaderState {
 
     private func setStatus(_ v: SongStatus?) { statusFilter = v; SongPrefs.setStatus(v) }
     private func setFlag(_ v: Int?) { flagFilter = v; SongPrefs.setFlag(v) }
-    private func setGroup(_ v: GroupBy?) { groupBy = v; SongPrefs.setGroupBy(v) }
+
+    private func setGroup(_ v: GroupBy?) {
+        // Group keys are not unique across criteria (e.g. Rating's "3" and a Flag with id 3 both key
+        // as "3"), so a retained expandedGroups entry could silently expand an unrelated group under
+        // the new criterion. Clear whenever the effective grouping criterion actually changes.
+        if v != groupBy { expandedGroups = [] }
+        groupBy = v
+        SongPrefs.setGroupBy(v)
+    }
 }
