@@ -36,6 +36,27 @@ struct SongsView: View {
         )
     }
 
+    private func groupKeys(for song: Song) -> [String] {
+        guard let groupBy = header.groupBy else { return [] }
+        return SongGrouping.groupKeys(
+            for: song, by: groupBy, flags: vm.flags[song.id] ?? [],
+            flagOrder: flagsInUse.map(\.id), rating: groupRating(song)
+        )
+    }
+
+    /// Grouping's rating is its own setting, independent of the Rating display chip.
+    private func groupRating(_ song: Song) -> Double {
+        guard header.groupRatingMode == .own, let me = vm.myBandMemberId else { return song.averageRating }
+        return Double(vm.individualRating(songId: song.id, memberId: me))
+    }
+
+    private var groups: [SongGroup] {
+        guard let groupBy = header.groupBy else { return [] }
+        return SongGrouping.groupSongs(
+            derivedSongs, by: groupBy, flagsInUse: flagsInUse, keysOf: groupKeys(for:)
+        )
+    }
+
     init(bandId: Int, currentUserId: Int, api: APIClient, library: MediaLibrary, shell: ShellState) {
         self.library = library
         self.shell = shell
@@ -104,6 +125,22 @@ struct SongsView: View {
         }
     }
 
+    @ViewBuilder private func songRow(_ song: Song) -> some View {
+        SongRow(
+            vm: vm,
+            song: song,
+            isWide: isWide,
+            isVotingOpen: votingSongId == song.id,
+            state: header,
+            onToggleVoting: {
+                votingSongId = (votingSongId == song.id) ? nil : song.id
+            },
+            onEdit: { editingSong = song },
+            onMedia: { mediaSong = song }
+        )
+        Divider().overlay(Palette.line)
+    }
+
     @ViewBuilder private var content: some View {
         if vm.isLoading && vm.songs.isEmpty {
             ProgressView().tint(Palette.textDim)
@@ -123,20 +160,32 @@ struct SongsView: View {
                             // An invisible anchor at the very top. Scrolling to the first song instead
                             // would stop short whenever a group header sits above it.
                             Color.clear.frame(height: 0).id(topAnchorID)
-                            ForEach(derivedSongs) { song in
-                                SongRow(
-                                    vm: vm,
-                                    song: song,
-                                    isWide: isWide,
-                                    isVotingOpen: votingSongId == song.id,
-                                    state: header,
-                                    onToggleVoting: {
-                                        votingSongId = (votingSongId == song.id) ? nil : song.id
-                                    },
-                                    onEdit: { editingSong = song },
-                                    onMedia: { mediaSong = song }
-                                )
-                                Divider().overlay(Palette.line)
+                            if header.groupBy == nil {
+                                ForEach(derivedSongs) { song in songRow(song) }
+                            } else {
+                                ForEach(groups) { group in
+                                    GroupHeader(
+                                        group: group,
+                                        collapsed: !header.expandedGroups.contains(group.key),
+                                        isWide: isWide
+                                    ) {
+                                        if header.expandedGroups.contains(group.key) {
+                                            header.expandedGroups.remove(group.key)
+                                        } else {
+                                            header.expandedGroups.insert(group.key)
+                                        }
+                                    }
+                                    .padding(.horizontal, 16)
+                                    .padding(.top, 8)
+
+                                    if header.expandedGroups.contains(group.key) {
+                                        // Keyed by group AND song id: Flag grouping is multi-membership,
+                                        // so one song legitimately appears under several groups.
+                                        ForEach(group.songs) { song in
+                                            songRow(song).id("\(group.key):\(song.id)")
+                                        }
+                                    }
+                                }
                             }
                         }
                     }
