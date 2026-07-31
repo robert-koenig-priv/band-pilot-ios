@@ -90,4 +90,15 @@ final class SongSortingTests: XCTestCase {
             [2]
         )
     }
+
+    /// `.whitespaces` does not include newlines, so a search of just "\n" used to survive trimming as
+    /// a non-empty needle and filter the list down to zero matches. Trimming with
+    /// `.whitespacesAndNewlines` treats it as no search at all.
+    func testWhitespaceAndNewlineOnlySearchReturnsEverySong() {
+        let songs = [song(1, "Africa", "Toto", .suggested, 0), song(2, "Bitch", "Meredith", .suggested, 0)]
+        XCTAssertEqual(
+            SongSorting.filtered(songs, status: nil, flagId: nil, flags: [:], search: " \n\t \n").count,
+            2
+        )
+    }
 }

@@ -28,12 +28,7 @@ struct SongsHeader: View {
         case .sort: SortChips(state: state)
         case .filter: FilterChips(state: state, flagsInUse: flagsInUse)
         case .group: GroupChips(state: state)
-        case .search:
-            // Task 8.
-            HStack(spacing: 6) {
-                SectionGlyph(section: section) { state.toggle(section) }
-                Text(section.label).font(.footnote).foregroundStyle(Palette.textDim)
-            }
+        case .search: SongSearchField(state: state)
         }
     }
 }

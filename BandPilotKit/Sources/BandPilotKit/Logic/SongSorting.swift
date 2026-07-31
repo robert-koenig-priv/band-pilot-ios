@@ -24,7 +24,7 @@ public enum SongSorting {
         if let flagId {
             out = out.filter { song in (flags[song.id] ?? []).contains { $0.flagId == flagId } }
         }
-        let needle = search.trimmingCharacters(in: .whitespaces)
+        let needle = search.trimmingCharacters(in: .whitespacesAndNewlines)
         if !needle.isEmpty {
             out = out.filter { song in
                 song.name.localizedCaseInsensitiveContains(needle)
