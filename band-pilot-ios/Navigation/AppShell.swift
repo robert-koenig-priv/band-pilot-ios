@@ -77,6 +77,13 @@ struct AppShell: View {
             state.sheet = sheet
             seeded = true
         }
+        // Comma-separated HeaderSection raw values, e.g. BP_OPEN_PANELS=filter,sort
+        if let raw = env["BP_OPEN_PANELS"] {
+            SongPrefs.setSections(
+                Set(raw.split(separator: ",").compactMap { HeaderSection(rawValue: String($0)) })
+            )
+            seeded = true
+        }
         if seeded { _shell = State(wrappedValue: state) }
         #endif
     }

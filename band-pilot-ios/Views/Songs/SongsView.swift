@@ -11,8 +11,29 @@ struct SongsView: View {
     @State private var votingSongId: Int?
     @State private var mediaSong: Song?
 
+    @State private var header = SongsHeaderState()
+
+    private let topAnchorID = "songs-top"
+
+    private var flagsInUse: [Flag] { SongGrouping.flagsInUse(vm.flags) }
+
+    /// Which rating the cards and the sort follow — the band average, or this member's own vote.
+    private func ratingOf(_ song: Song) -> Double {
+        guard header.ratingDisplay == .own, let me = vm.myBandMemberId else { return song.averageRating }
+        return Double(vm.individualRating(songId: song.id, memberId: me))
+    }
+
     private var derivedSongs: [Song] {
-        SongSorting.sorted(vm.songs, by: .rating, descending: false, ratingOf: \.averageRating)
+        let filtered = SongSorting.filtered(
+            vm.songs,
+            status: header.statusFilter,
+            flagId: header.flagFilter,
+            flags: vm.flags,
+            search: header.search
+        )
+        return SongSorting.sorted(
+            filtered, by: header.sort, descending: header.sortDescending, ratingOf: ratingOf
+        )
     }
 
     init(bandId: Int, currentUserId: Int, api: APIClient, library: MediaLibrary, shell: ShellState) {
@@ -26,13 +47,23 @@ struct SongsView: View {
             Palette.bg.ignoresSafeArea()
             content
         }
-        // The page label, as Android's bar shows — the band name lives in the drawer's band section.
-        // This is the nav-bar width the songs control bars need.
-        .navigationTitle("Songs")
+        // No title: back chevron + hamburger + count + Reset + five toggles already fill a 402pt bar.
+        // The drawer's highlighted Songs item is what identifies the page.
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
             ToolbarItem(placement: .topBarTrailing) {
                 Text("\(derivedSongs.count)").foregroundStyle(Palette.textDim)
+            }
+            ToolbarItem(placement: .topBarTrailing) {
+                Button { header.reset() } label: { Image(systemName: "arrow.counterclockwise") }
+                    .accessibilityLabel("Reset filters and options")
+            }
+            ToolbarItemGroup(placement: .topBarTrailing) {
+                // ForEach here, not inside a wrapper view: a custom View containing a ForEach can
+                // collapse into a single toolbar item.
+                ForEach(HeaderSection.allCases, id: \.self) { section in
+                    SongHeaderToggle(section: section, state: header)
+                }
             }
         }
         .drawerToolbar(shell)
@@ -73,6 +104,7 @@ struct SongsView: View {
                 library: library
             )
         }
+        .onChange(of: flagsInUse.map(\.id)) { _, _ in header.reconcile(flagsInUse: flagsInUse) }
     }
 
     @ViewBuilder private var content: some View {
@@ -86,22 +118,33 @@ struct SongsView: View {
             .padding(24)
         } else {
             VStack(spacing: 0) {
-                ScrollView {
-                    LazyVStack(spacing: 0) {
-                        ForEach(derivedSongs) { song in
-                            SongRow(
-                                vm: vm,
-                                song: song,
-                                isWide: isWide,
-                                isVotingOpen: votingSongId == song.id,
-                                onToggleVoting: {
-                                    votingSongId = (votingSongId == song.id) ? nil : song.id
-                                },
-                                onEdit: { editingSong = song },
-                                onMedia: { mediaSong = song }
-                            )
-                            Divider().overlay(Palette.line)
+                SongsHeader(state: header, flagsInUse: flagsInUse)
+                ScrollViewReader { proxy in
+                    ScrollView {
+                        LazyVStack(spacing: 0) {
+                            // An invisible anchor at the very top. Scrolling to the first song instead
+                            // would stop short whenever a group header sits above it.
+                            Color.clear.frame(height: 0).id(topAnchorID)
+                            ForEach(derivedSongs) { song in
+                                SongRow(
+                                    vm: vm,
+                                    song: song,
+                                    isWide: isWide,
+                                    isVotingOpen: votingSongId == song.id,
+                                    onToggleVoting: {
+                                        votingSongId = (votingSongId == song.id) ? nil : song.id
+                                    },
+                                    onEdit: { editingSong = song },
+                                    onMedia: { mediaSong = song }
+                                )
+                                Divider().overlay(Palette.line)
+                            }
                         }
+                    }
+                    // Opening a panel, changing the sort, or resetting all jump back to the top —
+                    // otherwise you are left staring at row 40 of a list you just reordered.
+                    .onChange(of: header.scrollToTopTick) { _, _ in
+                        withAnimation { proxy.scrollTo(topAnchorID, anchor: .top) }
                     }
                 }
             }
