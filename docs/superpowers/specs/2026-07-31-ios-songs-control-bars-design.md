@@ -17,11 +17,19 @@ persisted preference anywhere in the app.
 
 1. **All five sections in one spec, built in stages.** The shared parts — the toggle row, the chip
    pill, the preference store, the exclusivity rules — get decided once.
-2. **The toggles live in the nav bar**, not in a row of their own.
-3. **No title on the Songs screen.** Measured: back chevron + hamburger (~80pt) plus 7 trailing items
-   (count, Reset, 5 toggles) at ~38pt each is ~346pt of a 402pt bar, leaving ~56pt for a title that
-   wants ~60pt. Android fits 9 items only because it has no back button, uses 36dp buttons and has a
-   fixed short title. The drawer already highlights Songs, so the page stays identified.
+2. **The toggles live in a full-width row of their own, directly above the panels.** Count and Reset
+   stay in the nav bar.
+
+   ⚠️ **This reverses an earlier decision, and the reason is worth keeping.** The original choice was
+   the nav bar, justified by an estimate: back chevron + hamburger (~80pt) plus 7 trailing items at
+   ~38pt each ≈ 346pt of a 402pt bar. That estimate was **wrong**. It ignored that iOS 26 groups
+   trailing items into a single capsule with its own padding and reserves room for an overflow
+   affordance, so only **three** trailing items survive. Built as specified, the bar showed count +
+   Reset + one toggle and collapsed the other four into a `•••` menu — where their open/closed tint,
+   the entire point of the tint, is invisible. Verified on the iPhone 17 simulator, not calculated.
+3. **No title on the Songs screen.** The drawer already highlights Songs, so the page stays identified.
+   (The nav bar now has room for a title again, since only count and Reset remain. Keeping it titleless
+   is the standing decision; the space is available if that is ever revisited.)
 4. **iOS adopts Android's sort model exactly**: `name` / `artist` / `rating` plus a direction flag,
    default `rating`. **`practiceOrder` is deleted** — Android has no status-rank sort.
 5. **Reset is in scope; the reload button is not.**
@@ -118,22 +126,28 @@ callers honest instead of hiding a wrong default inside the package.
 One file per panel rather than one big header file, because Android's single 131KB file is precisely
 why none of this is testable or reviewable there.
 
-## The nav bar
+## The nav bar and the toggle row
 
-Leading: back chevron, hamburger (`.drawerToolbar`). No title. Trailing, left to right:
+**Nav bar.** Leading: back chevron, hamburger (`.drawerToolbar`). No title. Trailing: the visible song
+count (dim) and Reset (`arrow.counterclockwise`, runs `reset()`). Two trailing items, comfortably within
+the three iOS actually allows.
 
-| Item | Behaviour |
+**Toggle row.** A full-width row directly above the panels, holding the five toggles in
+`HeaderSection.allCases` order:
+
+| Toggle | Symbol |
 |---|---|
-| Count | `vm.visibleSongs.count`, dim |
-| Reset | `arrow.counterclockwise`, runs `reset()` |
 | Details | `eye` |
 | Sort | `arrow.up.arrow.down` |
 | Group | `rectangle.stack` |
 | Filter | `line.3.horizontal.decrease` |
 | Search | `magnifyingglass` |
 
-Each toggle is tinted `Palette.selected` when its panel is open and `Palette.textDim` when closed,
-20pt on a phone and 26pt when `isWide`.
+Each is tinted `Palette.selected` when its panel is open and `Palette.textDim` when closed, 22pt on a
+phone and 28pt when `isWide` — a point or two larger than the nav-bar version would have been, since the
+row is not competing for width. Evenly distributed across the width so the row reads as a control strip
+rather than a huddle of buttons, and it sits above the panel stack so a toggle is adjacent to the panel
+it opens.
 
 ## Panel visibility and exclusivity
 
