@@ -11,6 +11,10 @@ struct SongsView: View {
     @State private var votingSongId: Int?
     @State private var mediaSong: Song?
 
+    private var derivedSongs: [Song] {
+        SongSorting.sorted(vm.songs, by: .rating, descending: false, ratingOf: \.averageRating)
+    }
+
     init(bandId: Int, currentUserId: Int, api: APIClient, library: MediaLibrary, shell: ShellState) {
         self.library = library
         self.shell = shell
@@ -28,7 +32,7 @@ struct SongsView: View {
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
             ToolbarItem(placement: .topBarTrailing) {
-                Text("\(vm.visibleSongs.count)").foregroundStyle(Palette.textDim)
+                Text("\(derivedSongs.count)").foregroundStyle(Palette.textDim)
             }
         }
         .drawerToolbar(shell)
@@ -43,10 +47,10 @@ struct SongsView: View {
             await vm.loadMediaFiles(library: library)
             #if DEBUG
             let env = ProcessInfo.processInfo.environment
-            if env["BP_OPEN_VOTING"] == "1" { votingSongId = vm.visibleSongs.first?.id }
-            if env["BP_OPEN_EDIT"] == "1" { editingSong = vm.visibleSongs.first }
+            if env["BP_OPEN_VOTING"] == "1" { votingSongId = derivedSongs.first?.id }
+            if env["BP_OPEN_EDIT"] == "1" { editingSong = derivedSongs.first }
             if env["BP_OPEN_MEDIA"] == "1" {
-                for song in vm.visibleSongs {
+                for song in derivedSongs {
                     await vm.ensureMediaLoaded(songId: song.id)
                     if vm.hasMedia(song.id) { mediaSong = song; break }
                 }
@@ -82,10 +86,9 @@ struct SongsView: View {
             .padding(24)
         } else {
             VStack(spacing: 0) {
-                FilterSortBar(vm: vm)
                 ScrollView {
                     LazyVStack(spacing: 0) {
-                        ForEach(vm.visibleSongs) { song in
+                        ForEach(derivedSongs) { song in
                             SongRow(
                                 vm: vm,
                                 song: song,
@@ -102,53 +105,6 @@ struct SongsView: View {
                     }
                 }
             }
-        }
-    }
-}
-
-/// Status filter chips (exclusive; tapping the active one clears) + a sort menu.
-private struct FilterSortBar: View {
-    @Bindable var vm: BandDetailViewModel
-
-    var body: some View {
-        HStack(spacing: 0) {
-            ScrollView(.horizontal, showsIndicators: false) {
-                HStack(spacing: 8) {
-                    chip("All", active: vm.statusFilter == nil) { vm.statusFilter = nil }
-                    ForEach(SongStatus.allCases, id: \.self) { status in
-                        chip(status.label, active: vm.statusFilter == status) {
-                            vm.statusFilter = (vm.statusFilter == status) ? nil : status
-                        }
-                    }
-                }
-                .padding(.horizontal, 16)
-            }
-            Menu {
-                Picker("Sort", selection: $vm.sort) {
-                    Text("Rating").tag(SongSort.practiceOrder)
-                    Text("Song").tag(SongSort.name)
-                    Text("Artist").tag(SongSort.artist)
-                }
-            } label: {
-                Image(systemName: "arrow.up.arrow.down")
-                    .foregroundStyle(Palette.selected)
-                    .padding(.horizontal, 14)
-            }
-        }
-        .padding(.vertical, 10)
-        .background(Palette.bgSoft)
-    }
-
-    private func chip(_ title: String, active: Bool, action: @escaping () -> Void) -> some View {
-        Button(action: action) {
-            Text(title)
-                .font(.system(size: 13, weight: .semibold))
-                .foregroundStyle(active ? Palette.bg : Palette.text)
-                .padding(.horizontal, 12)
-                .padding(.vertical, 6)
-                .background(active ? AnyShapeStyle(Palette.selected) : AnyShapeStyle(Palette.bgCard))
-                .clipShape(Capsule())
-                .overlay(Capsule().stroke(Palette.line, lineWidth: active ? 0 : 1))
         }
     }
 }

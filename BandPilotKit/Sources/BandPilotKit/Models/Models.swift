@@ -81,6 +81,15 @@ public struct SongFlag: Codable, Sendable, Identifiable, Hashable {
     public let bandMemberId: Int?
 
     public var effectiveColor: String { color ?? flagColor }
+
+    public init(
+        id: Int, songId: Int, flagId: Int, meaning: String, description: String?,
+        meaningDetails: String?, color: String?, flagColor: String, bandMemberId: Int?
+    ) {
+        self.id = id; self.songId = songId; self.flagId = flagId; self.meaning = meaning
+        self.description = description; self.meaningDetails = meaningDetails; self.color = color
+        self.flagColor = flagColor; self.bandMemberId = bandMemberId
+    }
 }
 
 public struct Song: Codable, Sendable, Identifiable, Hashable {

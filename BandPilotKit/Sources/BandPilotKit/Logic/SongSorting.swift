@@ -1,39 +1,68 @@
 import Foundation
 
+/// Matches the Android app's sort options exactly. There is no status-rank ("practice order") sort:
+/// Android removed it, and `songComparator` there has no status term at all.
 public enum SongSort: String, Sendable, CaseIterable {
-    case practiceOrder
     case name
     case artist
+    case rating
 }
 
-/// Local filtering + sorting of the cached song list (mirrors the Android page's derived list).
+/// Local filtering + sorting of the cached song list.
 public enum SongSorting {
-    public static func filtered(_ songs: [Song], status: SongStatus?) -> [Song] {
-        guard let status else { return songs }
-        return songs.filter { $0.status == status }
-    }
-
-    public static func sorted(_ songs: [Song], by sort: SongSort) -> [Song] {
-        switch sort {
-        case .practiceOrder:
-            // status rank (NEED_PRACTICE → SUGGESTED → READY_FOR_STAGE), then rating descending.
-            return songs.sorted { a, b in
-                if a.status.practiceRank != b.status.practiceRank {
-                    return a.status.practiceRank < b.status.practiceRank
-                }
-                return a.averageRating > b.averageRating
-            }
-        case .name:
-            return songs.sorted { $0.name.localizedCaseInsensitiveCompare($1.name) == .orderedAscending }
-        case .artist:
-            return songs.sorted {
-                ($0.artist ?? "").localizedCaseInsensitiveCompare($1.artist ?? "") == .orderedAscending
+    /// Status, flag and search all narrow the list. Status and flag are mutually exclusive in the UI,
+    /// but this function does not enforce that — it just applies whatever it is given.
+    public static func filtered(
+        _ songs: [Song],
+        status: SongStatus?,
+        flagId: Int?,
+        flags: [Int: [SongFlag]],
+        search: String
+    ) -> [Song] {
+        var out = songs
+        if let status { out = out.filter { $0.status == status } }
+        if let flagId {
+            out = out.filter { song in (flags[song.id] ?? []).contains { $0.flagId == flagId } }
+        }
+        let needle = search.trimmingCharacters(in: .whitespaces)
+        if !needle.isEmpty {
+            out = out.filter { song in
+                song.name.localizedCaseInsensitiveContains(needle)
+                    || (song.artist ?? "").localizedCaseInsensitiveContains(needle)
             }
         }
+        return out
     }
 
-    /// Filter then sort, as the page does for its visible list.
-    public static func visible(_ songs: [Song], status: SongStatus?, sort: SongSort) -> [Song] {
-        sorted(filtered(songs, status: status), by: sort)
+    /// `ratingOf` is injected because the caller decides which rating is in play: the band average, or
+    /// the signed-in member's own vote when the Rating display chip says so.
+    ///
+    /// `.rating` is rating-descending with name as the tiebreak — so `descending: false` already means
+    /// highest-first — and `descending` then reverses the result. That is Android's arrangement, odd as
+    /// it reads, and diverging would make the same chip produce different orders on the two platforms.
+    public static func sorted(
+        _ songs: [Song],
+        by sort: SongSort,
+        descending: Bool,
+        ratingOf: (Song) -> Double
+    ) -> [Song] {
+        let ordered: [Song]
+        switch sort {
+        case .name:
+            ordered = songs.sorted { lower($0.name) < lower($1.name) }
+        case .artist:
+            ordered = songs.sorted { a, b in
+                let (x, y) = (lower(a.artist ?? ""), lower(b.artist ?? ""))
+                return x == y ? lower(a.name) < lower(b.name) : x < y
+            }
+        case .rating:
+            ordered = songs.sorted { a, b in
+                let (x, y) = (ratingOf(a), ratingOf(b))
+                return x == y ? lower(a.name) < lower(b.name) : x > y
+            }
+        }
+        return descending ? ordered.reversed() : ordered
     }
+
+    private static func lower(_ s: String) -> String { s.lowercased() }
 }
