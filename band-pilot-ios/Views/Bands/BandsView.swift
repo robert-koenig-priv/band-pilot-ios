@@ -5,13 +5,14 @@ struct BandsView: View {
     let session: SessionStore
     let api: APIClient
     let library: MediaLibrary
+    let shell: ShellState
     @State private var vm: BandsViewModel
-    @State private var showStorage = false
 
-    init(session: SessionStore, api: APIClient, library: MediaLibrary) {
+    init(session: SessionStore, api: APIClient, library: MediaLibrary, shell: ShellState) {
         self.library = library
         self.session = session
         self.api = api
+        self.shell = shell
         _vm = State(wrappedValue: BandsViewModel(api: api))
     }
 
@@ -21,21 +22,8 @@ struct BandsView: View {
             content
         }
         .navigationTitle("Bands")
-        .toolbar {
-            ToolbarItem(placement: .topBarTrailing) {
-                Menu {
-                    if let user = session.user {
-                        Text(user.fullName)
-                    }
-                    Button("Storage…") { showStorage = true }
-                    Button("Sign out", role: .destructive) { session.signOut() }
-                } label: {
-                    Image(systemName: "person.crop.circle")
-                }
-            }
-        }
+        .drawerToolbar(shell)
         .task { await vm.load() }
-        .navigationDestination(isPresented: $showStorage) { MediaStorageView(library: library) }
     }
 
     @ViewBuilder private var content: some View {
@@ -52,7 +40,13 @@ struct BandsView: View {
             ScrollView {
                 LazyVStack(spacing: 14) {
                     ForEach(vm.bands) { band in
-                        NavigationLink(value: AppRoute.songs(bandId: band.id)) {
+                        // A button rather than a NavigationLink so the band's name reaches the
+                        // drawer at the moment of the tap — it is in hand here, which spares the
+                        // drawer a fetch of its own.
+                        Button {
+                            shell.rememberBand(id: band.id, name: band.name)
+                            shell.open(.songs(bandId: band.id))
+                        } label: {
                             BandRow(band: band)
                         }
                         .buttonStyle(.plain)

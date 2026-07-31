@@ -4,8 +4,10 @@ import BandPilotKit
 struct RehearsalView: View {
     @State private var vm: RehearsalViewModel
     @State private var dateAction: RehearsalDateAction?
+    let shell: ShellState
 
-    init(bandId: Int, api: APIClient) {
+    init(bandId: Int, api: APIClient, shell: ShellState) {
+        self.shell = shell
         _vm = State(wrappedValue: RehearsalViewModel(bandId: bandId, api: api))
     }
 
@@ -14,12 +16,14 @@ struct RehearsalView: View {
             Palette.bg.ignoresSafeArea()
             content
         }
-        .navigationTitle("Rehearsals")
+        // Singular, matching the drawer item and Android's own Destination label.
+        .navigationTitle("Rehearsal")
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
             ToolbarItem(placement: .topBarTrailing) { EditButton() }
             ToolbarItem(placement: .topBarTrailing) { actionsMenu }
         }
+        .drawerToolbar(shell)
         .task { await vm.load() }
         .sheet(item: $dateAction) { action in
             DateTimeSheet(title: action.title, initial: initialDate(for: action)) { picked in

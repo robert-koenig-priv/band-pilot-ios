@@ -20,6 +20,7 @@ struct band_pilot_iosApp: App {
         WindowGroup {
             RootView(session: session, api: api, library: library)
                 .preferredColorScheme(.dark)
+                .immersive()
                 .task { await api.setTokenProvider(session) }
         }
     }
