@@ -101,4 +101,48 @@ final class SongSortingTests: XCTestCase {
             2
         )
     }
+
+    /// The exact differential the simulator could not observe: a live re-sort by rating would move
+    /// the mutated song, but `applyingFreeze` must hold the original snapshot order regardless.
+    func testApplyingFreezeHoldsOrderAgainstAChangeThatWouldReorderALiveSort() {
+        let songs = [
+            song(1, "Abracadabra", "x", .suggested, 1.0),
+            song(2, "Crazy", "x", .suggested, 2.0),
+            song(3, "Zed", "x", .suggested, 3.0),
+        ]
+        let frozenOrder = songs.map(\.id)
+
+        // Mutate "Abracadabra"'s rating so a live rating-sort would now put it first.
+        var rated = songs
+        rated[0] = song(1, "Abracadabra", "x", .suggested, 99.0)
+
+        // Sanity check: an unfrozen live re-sort really would move it.
+        let live = SongSorting.sorted(rated, by: .rating, descending: false, ratingOf: avg)
+        XCTAssertEqual(live.map(\.id), [1, 3, 2])
+
+        XCTAssertEqual(
+            SongSorting.applyingFreeze(rated, frozenOrder: frozenOrder).map(\.id),
+            [1, 2, 3]
+        )
+    }
+
+    func testApplyingFreezeSortsASongAbsentFromTheSnapshotLast() {
+        let songs = [song(1, "A", "x", .suggested, 0), song(2, "B", "x", .suggested, 0)]
+        XCTAssertEqual(
+            SongSorting.applyingFreeze(songs, frozenOrder: [2]).map(\.id),
+            [2, 1]
+        )
+    }
+
+    func testApplyingFreezeKeepsAbsentSongsInStableRelativeOrder() {
+        let songs = [
+            song(1, "A", "x", .suggested, 0),
+            song(2, "B", "x", .suggested, 0),
+            song(3, "C", "x", .suggested, 0),
+        ]
+        XCTAssertEqual(
+            SongSorting.applyingFreeze(songs, frozenOrder: [3]).map(\.id),
+            [3, 1, 2]
+        )
+    }
 }

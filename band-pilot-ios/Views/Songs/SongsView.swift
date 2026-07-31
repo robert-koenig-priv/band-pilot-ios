@@ -81,21 +81,20 @@ struct SongsView: View {
     /// the snapshot (added since it was taken) sorts last rather than vanishing.
     private func displayedSongs(from songs: [Song]) -> [Song] {
         guard votingSongId != nil, let frozen = frozenOrder else { return songs }
-        return songs.sorted {
-            (frozen.firstIndex(of: $0.id) ?? Int.max) < (frozen.firstIndex(of: $1.id) ?? Int.max)
-        }
+        return SongSorting.applyingFreeze(songs, frozenOrder: frozen)
     }
 
     /// Snapshots the current order/group-keys only if no voting section was already open (a fresh
     /// open); switching directly between songs' sections keeps the existing snapshot in place.
     private func openVoting(songId: Int) {
         if votingSongId == nil {
+            let songs = derivedSongs
             let flagOrder = flagsInUse.map(\.id)
-            frozenOrder = derivedSongs.map(\.id)
+            frozenOrder = songs.map(\.id)
             frozenGroupKeys = header.groupBy == nil
                 ? nil
                 : Dictionary(
-                    uniqueKeysWithValues: derivedSongs.map { ($0.id, groupKeys(for: $0, flagOrder: flagOrder)) }
+                    uniqueKeysWithValues: songs.map { ($0.id, groupKeys(for: $0, flagOrder: flagOrder)) }
                 )
         }
         votingSongId = songId
@@ -181,6 +180,25 @@ struct SongsView: View {
         .onChange(of: flagsInUse.map(\.id)) { _, _ in header.reconcile(flagsInUse: flagsInUse) }
         .onChange(of: header.visibleDetails.contains(.media)) { _, shown in
             if !shown { mediaSong = nil }
+        }
+        // The freeze exists to suppress *incidental* reordering — a vote landing while the user is
+        // looking at the list. It must not suppress *deliberate* reordering the user just asked for:
+        // if the grouping criterion changes while a voting section is open, the frozen group-key
+        // snapshot (taken under the old criterion) no longer has any keys valid for the new one, and
+        // `SongGrouping.groupSongs` would render zero groups. So changing grouping or sort lifts the
+        // freeze — leaving `votingSongId` untouched, so the section stays open — rather than the
+        // freeze silently discarding the user's own action.
+        .onChange(of: header.groupBy) { _, _ in
+            frozenOrder = nil
+            frozenGroupKeys = nil
+        }
+        .onChange(of: header.sort) { _, _ in
+            frozenOrder = nil
+            frozenGroupKeys = nil
+        }
+        .onChange(of: header.sortDescending) { _, _ in
+            frozenOrder = nil
+            frozenGroupKeys = nil
         }
     }
 

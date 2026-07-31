@@ -66,3 +66,13 @@ public enum SongSorting {
 
     private static func lower(_ s: String) -> String { s.lowercased() }
 }
+
+extension SongSorting {
+    /// Reorders `songs` to match `frozenOrder` (a prior snapshot of song ids); a song absent from
+    /// the snapshot sorts last rather than vanishing. Used to freeze list order while a per-song
+    /// voting section is open, so a vote cannot reshuffle the list under the user's thumb.
+    public static func applyingFreeze(_ songs: [Song], frozenOrder: [Int]) -> [Song] {
+        let index = Dictionary(uniqueKeysWithValues: frozenOrder.enumerated().map { ($1, $0) })
+        return songs.sorted { (index[$0.id] ?? Int.max) < (index[$1.id] ?? Int.max) }
+    }
+}
