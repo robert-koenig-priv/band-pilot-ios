@@ -99,6 +99,9 @@ struct SongsView: View {
             )
         }
         .onChange(of: flagsInUse.map(\.id)) { _, _ in header.reconcile(flagsInUse: flagsInUse) }
+        .onChange(of: header.visibleDetails.contains(.media)) { _, shown in
+            if !shown { mediaSong = nil }
+        }
     }
 
     @ViewBuilder private var content: some View {
@@ -126,6 +129,7 @@ struct SongsView: View {
                                     song: song,
                                     isWide: isWide,
                                     isVotingOpen: votingSongId == song.id,
+                                    state: header,
                                     onToggleVoting: {
                                         votingSongId = (votingSongId == song.id) ? nil : song.id
                                     },

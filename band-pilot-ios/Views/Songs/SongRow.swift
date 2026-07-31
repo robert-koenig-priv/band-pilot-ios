@@ -6,6 +6,7 @@ struct SongRow: View {
     let song: Song
     let isWide: Bool
     let isVotingOpen: Bool
+    let state: SongsHeaderState
     let onToggleVoting: () -> Void
     let onEdit: () -> Void
     let onMedia: () -> Void
@@ -18,8 +19,11 @@ struct SongRow: View {
                         Text(song.name)
                             .font(.system(size: 17))
                             .foregroundStyle(Palette.text)
-                        if let artist = song.artist, !artist.isEmpty {
-                            Text(artist).font(.subheadline).foregroundStyle(Palette.textDim)
+                        if let second = secondLine {
+                            Text(second).font(.subheadline).foregroundStyle(Palette.textDim)
+                        }
+                        if state.visibleDetails.contains(.key) || state.visibleDetails.contains(.bpm) {
+                            Text(keyAndBpm).font(.caption).foregroundStyle(Palette.textDim)
                         }
                     }
                     .frame(maxWidth: .infinity, alignment: .leading)
@@ -27,9 +31,11 @@ struct SongRow: View {
                 }
                 .buttonStyle(.plain)
 
-                FlagBadges(flags: vm.flags[song.id] ?? [], size: isWide ? 16 : 14)
+                if state.flagsVisible {
+                    FlagBadges(flags: vm.flags[song.id] ?? [], size: isWide ? 16 : 14)
+                }
 
-                if vm.hasMedia(song.id) {
+                if state.visibleDetails.contains(.media), vm.hasMedia(song.id) {
                     Button(action: onMedia) {
                         Image(systemName: "play.circle.fill")
                             .font(.system(size: isWide ? 24 : 20))
@@ -40,8 +46,12 @@ struct SongRow: View {
 
                 Button(action: onToggleVoting) {
                     HStack(spacing: 8) {
-                        StatusMark(status: song.status, size: isWide ? 18 : 15)
-                        AverageRating(average: song.averageRating, size: isWide ? 20 : 16)
+                        if state.visibleDetails.contains(.status) {
+                            StatusMark(status: song.status, size: isWide ? 18 : 15)
+                        }
+                        if state.ratingDisplay != .hidden {
+                            AverageRating(average: shownRating, size: isWide ? 20 : 16)
+                        }
                         Image(systemName: isVotingOpen ? "chevron.up" : "chevron.down")
                             .font(.caption)
                             .foregroundStyle(Palette.textDim)
@@ -60,6 +70,33 @@ struct SongRow: View {
             }
         }
         .task { await vm.ensureMediaLoaded(songId: song.id) }
+    }
+
+    /// Artist and duration share the second line, joined by " · " — as on Android.
+    private var secondLine: String? {
+        var parts: [String] = []
+        if state.visibleDetails.contains(.artist), let a = song.artist, !a.isEmpty { parts.append(a) }
+        if state.visibleDetails.contains(.duration), let secs = song.durationSec, secs > 0 {
+            parts.append(DurationFormat.string(secs))
+        }
+        return parts.isEmpty ? nil : parts.joined(separator: " · ")
+    }
+
+    private var keyAndBpm: String {
+        var parts: [String] = []
+        if state.visibleDetails.contains(.key), let k = song.key ?? song.originalKey, !k.isEmpty {
+            parts.append(k)
+        }
+        if state.visibleDetails.contains(.bpm), let bpm = song.bpm ?? song.originalBpm, bpm > 0 {
+            parts.append("\(bpm) BPM")
+        }
+        return parts.joined(separator: " · ")
+    }
+
+    /// Follows the Rating display chip: the band's average, or this member's own vote.
+    private var shownRating: Double {
+        guard state.ratingDisplay == .own, let me = vm.myBandMemberId else { return song.averageRating }
+        return Double(vm.individualRating(songId: song.id, memberId: me))
     }
 }
 

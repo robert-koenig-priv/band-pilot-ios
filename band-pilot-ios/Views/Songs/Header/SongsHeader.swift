@@ -24,9 +24,11 @@ struct SongsHeader: View {
 
     @ViewBuilder private func row(_ section: HeaderSection) -> some View {
         switch section {
-        case .details, .sort, .group, .filter, .search:
-            // Panels land in Tasks 6-8. Until then a section shows its glyph only, which still proves
-            // the toggle row, the persistence and the exclusivity rules.
+        case .details: DetailChips(state: state, flagsInUse: flagsInUse)
+        case .sort: SortChips(state: state)
+        case .filter: FilterChips(state: state, flagsInUse: flagsInUse)
+        case .group, .search:
+            // Tasks 7 and 8.
             HStack(spacing: 6) {
                 SectionGlyph(section: section) { state.toggle(section) }
                 Text(section.label).font(.footnote).foregroundStyle(Palette.textDim)
