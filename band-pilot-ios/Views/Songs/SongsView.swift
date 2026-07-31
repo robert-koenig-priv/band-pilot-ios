@@ -47,7 +47,8 @@ struct SongsView: View {
             Palette.bg.ignoresSafeArea()
             content
         }
-        // No title: back chevron + hamburger + count + Reset + five toggles already fill a 402pt bar.
+        // No title: back chevron + hamburger + count + Reset fill the bar; the five toggles live in
+        // their own full-width row instead (see SongHeaderToggles) — the nav bar could not fit them.
         // The drawer's highlighted Songs item is what identifies the page.
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
@@ -57,13 +58,6 @@ struct SongsView: View {
             ToolbarItem(placement: .topBarTrailing) {
                 Button { header.reset() } label: { Image(systemName: "arrow.counterclockwise") }
                     .accessibilityLabel("Reset filters and options")
-            }
-            ToolbarItemGroup(placement: .topBarTrailing) {
-                // ForEach here, not inside a wrapper view: a custom View containing a ForEach can
-                // collapse into a single toolbar item.
-                ForEach(HeaderSection.allCases, id: \.self) { section in
-                    SongHeaderToggle(section: section, state: header)
-                }
             }
         }
         .drawerToolbar(shell)
@@ -118,6 +112,7 @@ struct SongsView: View {
             .padding(24)
         } else {
             VStack(spacing: 0) {
+                SongHeaderToggles(state: header)
                 SongsHeader(state: header, flagsInUse: flagsInUse)
                 ScrollViewReader { proxy in
                     ScrollView {

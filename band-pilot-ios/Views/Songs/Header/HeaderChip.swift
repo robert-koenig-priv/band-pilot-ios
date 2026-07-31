@@ -84,24 +84,33 @@ extension HeaderSection {
     }
 }
 
-/// One nav-bar toggle.
+/// The five panel toggles, as a full-width row above the panels.
 ///
-/// A single button rather than a view wrapping all five: a custom `View` containing a `ForEach` placed
-/// in a `ToolbarItemGroup` can collapse into **one** toolbar item, which would silently give you one
-/// icon where five belong. The `ForEach` therefore lives in the toolbar itself (see `SongsView`).
-struct SongHeaderToggle: View {
-    let section: HeaderSection
+/// **Not in the nav bar.** That was tried and measured: iOS 26 groups trailing items into one capsule
+/// with its own padding and reserves room for an overflow affordance, so only three trailing items
+/// survive. With count and Reset already there, four of the five toggles collapsed into a `•••` menu —
+/// where their open/closed tint, the whole point of the tint, cannot be seen. A row of its own always
+/// fits, scales to any width, and puts each toggle next to the panel it opens.
+struct SongHeaderToggles: View {
     let state: SongsHeaderState
     @Environment(\.isWide) private var isWide
 
-    private var isOpen: Bool { state.visibleSections.contains(section) }
-
     var body: some View {
-        Button { state.toggle(section) } label: {
-            Image(systemName: section.symbol)
-                .font(.system(size: isWide ? 26 : 20))
-                .foregroundStyle(isOpen ? Palette.selected : Palette.textDim)
+        HStack(spacing: 0) {
+            ForEach(HeaderSection.allCases, id: \.self) { section in
+                let isOpen = state.visibleSections.contains(section)
+                Button { state.toggle(section) } label: {
+                    Image(systemName: section.symbol)
+                        .font(.system(size: isWide ? 28 : 22))
+                        .foregroundStyle(isOpen ? Palette.selected : Palette.textDim)
+                        .frame(maxWidth: .infinity)
+                        .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel((isOpen ? "Hide " : "Show ") + section.label)
+            }
         }
-        .accessibilityLabel((isOpen ? "Hide " : "Show ") + section.label)
+        .padding(.horizontal, 16)
+        .padding(.vertical, 10)
     }
 }
