@@ -142,6 +142,10 @@ final class SongSortingTests: XCTestCase {
         )
     }
 
+    /// `Array.sorted` is explicitly documented as not a stable sort, and every song absent from the
+    /// snapshot shares the `Int.max` fallback key — so without an explicit tiebreak this would pass
+    /// only by luck of today's stdlib. `applyingFreeze` breaks the tie by id, so this is a genuine
+    /// guarantee rather than an accident of implementation.
     func testApplyingFreezeKeepsAbsentSongsInStableRelativeOrder() {
         let songs = [
             song(1, "A", "x", .suggested, 0),
@@ -151,6 +155,17 @@ final class SongSortingTests: XCTestCase {
         XCTAssertEqual(
             SongSorting.applyingFreeze(songs, frozenOrder: [3]).map(\.id),
             [3, 1, 2]
+        )
+    }
+
+    /// The fatal-erroring `uniqueKeysWithValues:` this replaced would trap on a duplicate id in
+    /// `frozenOrder`. A duplicate must degrade to an odd order instead — ordered by each id's *first*
+    /// occurrence in `frozenOrder`.
+    func testApplyingFreezeToleratesDuplicateIdsInFrozenOrder() {
+        let songs = [song(1, "A", "x", .suggested, 0), song(2, "B", "x", .suggested, 0)]
+        XCTAssertEqual(
+            SongSorting.applyingFreeze(songs, frozenOrder: [2, 2, 1]).map(\.id),
+            [2, 1]
         )
     }
 }

@@ -84,20 +84,49 @@ struct SongsView: View {
         return SongSorting.applyingFreeze(songs, frozenOrder: frozen)
     }
 
+    /// Computes a fresh order/group-key snapshot from the *current* sort and grouping. Shared by
+    /// `openVoting` (first snapshot) and `retakeFreeze` (re-snapshot on a deliberate reorder/regroup)
+    /// so the logic exists in exactly one place.
+    ///
+    /// `uniquingKeysWith:` (keeping the first occurrence), not `uniqueKeysWithValues:`: nothing
+    /// upstream guarantees song ids are unique, and a duplicate id must degrade to an odd order and
+    /// never a crash — the same reasoning `SongSorting.applyingFreeze` applies to its own dictionary.
+    private func snapshot() -> (order: [Int], groupKeys: [Int: [String]]?) {
+        let songs = derivedSongs
+        let flagOrder = flagsInUse.map(\.id)
+        let order = songs.map(\.id)
+        let keys: [Int: [String]]? = header.groupBy == nil
+            ? nil
+            : Dictionary(
+                songs.map { ($0.id, groupKeys(for: $0, flagOrder: flagOrder)) },
+                uniquingKeysWith: { first, _ in first }
+            )
+        return (order, keys)
+    }
+
     /// Snapshots the current order/group-keys only if no voting section was already open (a fresh
     /// open); switching directly between songs' sections keeps the existing snapshot in place.
     private func openVoting(songId: Int) {
         if votingSongId == nil {
-            let songs = derivedSongs
-            let flagOrder = flagsInUse.map(\.id)
-            frozenOrder = songs.map(\.id)
-            frozenGroupKeys = header.groupBy == nil
-                ? nil
-                : Dictionary(
-                    uniqueKeysWithValues: songs.map { ($0.id, groupKeys(for: $0, flagOrder: flagOrder)) }
-                )
+            let snap = snapshot()
+            frozenOrder = snap.order
+            frozenGroupKeys = snap.groupKeys
         }
         votingSongId = songId
+    }
+
+    /// Called when an ordering/grouping input changes while a voting section is open. The freeze
+    /// suppresses *incidental* reordering — a vote landing while the user is just looking at the
+    /// list — but must honour *deliberate* reordering the user just asked for. Discarding the freeze
+    /// outright would leave the list live again until the section closes, so a vote landing in that
+    /// window could still reshuffle it — exactly what the freeze exists to prevent. Retaking the
+    /// snapshot from the *new* sort/grouping instead keeps both promises: the freeze stays up (a vote
+    /// still cannot move anything) while reflecting the ordering/grouping the user just chose.
+    private func retakeFreeze() {
+        guard votingSongId != nil else { return }
+        let snap = snapshot()
+        frozenOrder = snap.order
+        frozenGroupKeys = snap.groupKeys
     }
 
     /// Closing the voting section — or opening the (mutually exclusive) media sheet — lifts the freeze.
@@ -140,6 +169,12 @@ struct SongsView: View {
         .drawerToolbar(shell)
         .task {
             await vm.load()
+            // `onChange(of: flagsInUse...)` below never fires on its initial value, and `vm.flags` is
+            // empty before `load()` returns — so a flag filter persisted from a band that actually has
+            // that flag would never get reconciled if the newly-loaded band has none at all. Running
+            // reconcile once, right here, covers that first-load case; the onChange stays for every
+            // later mutation (e.g. a flag deleted mid-session).
+            header.reconcile(flagsInUse: flagsInUse)
             // The drawer's band heading, refreshed from the page that actually fetched the band.
             // BandsView already supplies the name on tap, so this is normally a no-op — but a deep
             // link (BP_OPEN_BAND) arrives with no name at all, and Android likewise shows the name
@@ -181,25 +216,13 @@ struct SongsView: View {
         .onChange(of: header.visibleDetails.contains(.media)) { _, shown in
             if !shown { mediaSong = nil }
         }
-        // The freeze exists to suppress *incidental* reordering — a vote landing while the user is
-        // looking at the list. It must not suppress *deliberate* reordering the user just asked for:
-        // if the grouping criterion changes while a voting section is open, the frozen group-key
-        // snapshot (taken under the old criterion) no longer has any keys valid for the new one, and
-        // `SongGrouping.groupSongs` would render zero groups. So changing grouping or sort lifts the
-        // freeze — leaving `votingSongId` untouched, so the section stays open — rather than the
-        // freeze silently discarding the user's own action.
-        .onChange(of: header.groupBy) { _, _ in
-            frozenOrder = nil
-            frozenGroupKeys = nil
-        }
-        .onChange(of: header.sort) { _, _ in
-            frozenOrder = nil
-            frozenGroupKeys = nil
-        }
-        .onChange(of: header.sortDescending) { _, _ in
-            frozenOrder = nil
-            frozenGroupKeys = nil
-        }
+        // Every input that can change the displayed order or grouping while a voting section is open
+        // retakes the freeze rather than discarding it — see `retakeFreeze()`'s doc comment for why.
+        .onChange(of: header.groupBy) { _, _ in retakeFreeze() }
+        .onChange(of: header.sort) { _, _ in retakeFreeze() }
+        .onChange(of: header.sortDescending) { _, _ in retakeFreeze() }
+        .onChange(of: header.groupRatingMode) { _, _ in retakeFreeze() }
+        .onChange(of: header.ratingDisplay) { _, _ in retakeFreeze() }
     }
 
     @ViewBuilder private func songRow(_ song: Song) -> some View {

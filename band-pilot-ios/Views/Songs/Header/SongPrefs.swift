@@ -43,9 +43,19 @@ enum SongPrefs {
 
     static func sortDescending() -> Bool { defaults.bool(forKey: Key.sortDescending) }
 
+    /// Folds the stored set through `HeaderSections.toggling` — opening each stored section in
+    /// `allCases` order, exactly as the UI would — so a combination the UI itself could never produce
+    /// (e.g. a future build's `["filter","group","search"]`, or one poked in via the DEBUG
+    /// `BP_OPEN_PANELS` hook) reduces to a legal one instead of stranding this build with three
+    /// mutually-exclusive panels open and none of the state-clears having run.
     static func sections() -> Set<HeaderSection> {
         let raw = defaults.stringArray(forKey: Key.headerSections) ?? []
-        return Set(raw.compactMap(HeaderSection.init(rawValue:)))
+        let loaded = Set(raw.compactMap(HeaderSection.init(rawValue:)))
+        return HeaderSection.allCases
+            .filter(loaded.contains)
+            .reduce(into: Set<HeaderSection>()) { acc, section in
+                acc = HeaderSections.toggling(section, in: acc)
+            }
     }
 
     static func ratingDisplay() -> RatingDisplay {

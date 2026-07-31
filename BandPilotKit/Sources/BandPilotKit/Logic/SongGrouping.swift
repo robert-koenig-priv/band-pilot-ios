@@ -61,7 +61,7 @@ public enum SongGrouping {
         case .status:
             return [song.status.rawValue]
         case .artist:
-            let trimmed = (song.artist ?? "").trimmingCharacters(in: .whitespaces)
+            let trimmed = (song.artist ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
             return [trimmed.isEmpty ? unknownArtistKey : trimmed]
         case .decade:
             guard let year = leadingYear(song.year) else { return [unknownYearKey] }

@@ -48,6 +48,7 @@ struct GroupHeader: View {
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
-        .accessibilityLabel(collapsed ? "Expand group" : "Collapse group")
+        .accessibilityLabel("\(group.label), \(group.songs.count) songs")
+        .accessibilityHint(collapsed ? "Expand group" : "Collapse group")
     }
 }

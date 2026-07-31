@@ -80,6 +80,12 @@ extension SongSorting {
             frozenOrder.enumerated().map { ($1, $0) },
             uniquingKeysWith: { first, _ in first }
         )
-        return songs.sorted { (index[$0.id] ?? Int.max) < (index[$1.id] ?? Int.max) }
+        // Every song absent from the snapshot shares the `Int.max` fallback, and `Array.sorted` is
+        // explicitly not a stable sort — so ties need an explicit tiebreak rather than relying on
+        // input order, which is not guaranteed to survive. Absent songs fall back to id order.
+        return songs.sorted { a, b in
+            let (ia, ib) = (index[a.id] ?? Int.max, index[b.id] ?? Int.max)
+            return ia == ib ? a.id < b.id : ia < ib
+        }
     }
 }
