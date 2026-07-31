@@ -11,6 +11,13 @@ struct SongsView: View {
     @State private var votingSongId: Int?
     @State private var mediaSong: Song?
 
+    /// While a voting section is open the displayed order is frozen, so casting a vote cannot
+    /// reshuffle the list under the user's thumb. Snapshotted only when a section opens *fresh*:
+    /// switching straight to another song's section keeps the existing snapshot.
+    @State private var frozenOrder: [Int]?
+    /// Same idea for grouping — a vote must not move a song into a different group mid-tap.
+    @State private var frozenGroupKeys: [Int: [String]]?
+
     @State private var header = SongsHeaderState()
 
     private let topAnchorID = "songs-top"
@@ -47,6 +54,13 @@ struct SongsView: View {
         )
     }
 
+    /// While a voting section is open, group keys come from the frozen snapshot instead of being
+    /// recomputed — otherwise a vote could move a song into a different group mid-tap.
+    private func effectiveGroupKeys(for song: Song, flagOrder: [Int]) -> [String] {
+        if votingSongId != nil, let frozen = frozenGroupKeys?[song.id] { return frozen }
+        return groupKeys(for: song, flagOrder: flagOrder)
+    }
+
     /// Grouping's rating is its own setting, independent of the Rating display chip.
     private func groupRating(_ song: Song) -> Double {
         guard header.groupRatingMode == .own, let me = vm.myBandMemberId else { return song.averageRating }
@@ -58,8 +72,40 @@ struct SongsView: View {
         let flagOrder = flagsInUse.map(\.id)
         return SongGrouping.groupSongs(
             songs, by: groupBy, flagsInUse: flagsInUse,
-            keysOf: { self.groupKeys(for: $0, flagOrder: flagOrder) }
+            keysOf: { self.effectiveGroupKeys(for: $0, flagOrder: flagOrder) }
         )
+    }
+
+    /// The order shown while a voting section is open is the frozen snapshot, not the live sort —
+    /// otherwise casting a vote could reshuffle the list under the user's thumb. A song absent from
+    /// the snapshot (added since it was taken) sorts last rather than vanishing.
+    private func displayedSongs(from songs: [Song]) -> [Song] {
+        guard votingSongId != nil, let frozen = frozenOrder else { return songs }
+        return songs.sorted {
+            (frozen.firstIndex(of: $0.id) ?? Int.max) < (frozen.firstIndex(of: $1.id) ?? Int.max)
+        }
+    }
+
+    /// Snapshots the current order/group-keys only if no voting section was already open (a fresh
+    /// open); switching directly between songs' sections keeps the existing snapshot in place.
+    private func openVoting(songId: Int) {
+        if votingSongId == nil {
+            let flagOrder = flagsInUse.map(\.id)
+            frozenOrder = derivedSongs.map(\.id)
+            frozenGroupKeys = header.groupBy == nil
+                ? nil
+                : Dictionary(
+                    uniqueKeysWithValues: derivedSongs.map { ($0.id, groupKeys(for: $0, flagOrder: flagOrder)) }
+                )
+        }
+        votingSongId = songId
+    }
+
+    /// Closing the voting section — or opening the (mutually exclusive) media sheet — lifts the freeze.
+    private func closeVoting() {
+        votingSongId = nil
+        frozenOrder = nil
+        frozenGroupKeys = nil
     }
 
     init(bandId: Int, currentUserId: Int, api: APIClient, library: MediaLibrary, shell: ShellState) {
@@ -72,9 +118,12 @@ struct SongsView: View {
         // Hoisted once per body pass: computed by `derivedSongs` above, but re-deriving it separately
         // for the nav-bar count and for the list would filter/sort the song list twice per render.
         let songs = derivedSongs
+        // The nav-bar count always reflects the unfrozen list — the freeze reorders, it never filters —
+        // while the list itself follows the frozen snapshot whenever a voting section is open.
+        let displayed = displayedSongs(from: songs)
         ZStack {
             Palette.bg.ignoresSafeArea()
-            content(derivedSongs: songs)
+            content(derivedSongs: displayed)
         }
         // No title: back chevron + hamburger + count + Reset fill the bar; the five toggles live in
         // their own full-width row instead (see SongHeaderToggles) — the nav bar could not fit them.
@@ -101,7 +150,9 @@ struct SongsView: View {
             await vm.loadMediaFiles(library: library)
             #if DEBUG
             let env = ProcessInfo.processInfo.environment
-            if env["BP_OPEN_VOTING"] == "1" { votingSongId = derivedSongs.first?.id }
+            if env["BP_OPEN_VOTING"] == "1" {
+                if let id = derivedSongs.first?.id { openVoting(songId: id) }
+            }
             if env["BP_OPEN_EDIT"] == "1" { editingSong = derivedSongs.first }
             if env["BP_OPEN_MEDIA"] == "1" {
                 for song in derivedSongs {
@@ -141,10 +192,17 @@ struct SongsView: View {
             isVotingOpen: votingSongId == song.id,
             state: header,
             onToggleVoting: {
-                votingSongId = (votingSongId == song.id) ? nil : song.id
+                if votingSongId == song.id {
+                    closeVoting()
+                } else {
+                    openVoting(songId: song.id)
+                }
             },
             onEdit: { editingSong = song },
-            onMedia: { mediaSong = song }
+            onMedia: {
+                mediaSong = song
+                closeVoting()
+            }
         )
         Divider().overlay(Palette.line)
     }
