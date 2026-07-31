@@ -22,8 +22,8 @@ struct SongRow: View {
                         if let second = secondLine {
                             Text(second).font(.subheadline).foregroundStyle(Palette.textDim)
                         }
-                        if state.visibleDetails.contains(.key) || state.visibleDetails.contains(.bpm) {
-                            Text(keyAndBpm).font(.caption).foregroundStyle(Palette.textDim)
+                        if let third = keyAndBpm {
+                            Text(third).font(.caption).foregroundStyle(Palette.textDim)
                         }
                     }
                     .frame(maxWidth: .infinity, alignment: .leading)
@@ -82,7 +82,7 @@ struct SongRow: View {
         return parts.isEmpty ? nil : parts.joined(separator: " · ")
     }
 
-    private var keyAndBpm: String {
+    private var keyAndBpm: String? {
         var parts: [String] = []
         if state.visibleDetails.contains(.key), let k = song.key ?? song.originalKey, !k.isEmpty {
             parts.append(k)
@@ -90,7 +90,7 @@ struct SongRow: View {
         if state.visibleDetails.contains(.bpm), let bpm = song.bpm ?? song.originalBpm, bpm > 0 {
             parts.append("\(bpm) BPM")
         }
-        return parts.joined(separator: " · ")
+        return parts.isEmpty ? nil : parts.joined(separator: " · ")
     }
 
     /// Follows the Rating display chip: the band's average, or this member's own vote.

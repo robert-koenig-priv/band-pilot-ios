@@ -6,7 +6,6 @@ import BandPilotKit
 struct FilterChips: View {
     let state: SongsHeaderState
     let flagsInUse: [Flag]
-    @Environment(\.isWide) private var isWide
     @State private var flagMenuOpen = false
 
     /// Chip order, matching Android's STATUS_CHIP_ORDER — not the enum's declaration order.
