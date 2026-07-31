@@ -104,6 +104,13 @@ final class SongSortingTests: XCTestCase {
 
     /// The exact differential the simulator could not observe: a live re-sort by rating would move
     /// the mutated song, but `applyingFreeze` must hold the original snapshot order regardless.
+    ///
+    /// The input handed to `applyingFreeze` is deliberately the *live-resorted* list (order
+    /// `[1, 3, 2]`), not the original array with a value mutated in place (which would still be in
+    /// order `[1, 2, 3]` — identical to the expected output, so a no-op `applyingFreeze` would pass
+    /// this test too). Feeding in the reordered list means a no-op fails (it would return
+    /// `[1, 3, 2]` unchanged) and a live re-sort fails (it produced that very input), so only an
+    /// implementation that actually restores `frozenOrder` passes.
     func testApplyingFreezeHoldsOrderAgainstAChangeThatWouldReorderALiveSort() {
         let songs = [
             song(1, "Abracadabra", "x", .suggested, 1.0),
@@ -116,12 +123,13 @@ final class SongSortingTests: XCTestCase {
         var rated = songs
         rated[0] = song(1, "Abracadabra", "x", .suggested, 99.0)
 
-        // Sanity check: an unfrozen live re-sort really would move it.
+        // An unfrozen live re-sort really would move it — and this reordered list, not `rated`
+        // itself, is what gets fed to `applyingFreeze` below.
         let live = SongSorting.sorted(rated, by: .rating, descending: false, ratingOf: avg)
         XCTAssertEqual(live.map(\.id), [1, 3, 2])
 
         XCTAssertEqual(
-            SongSorting.applyingFreeze(rated, frozenOrder: frozenOrder).map(\.id),
+            SongSorting.applyingFreeze(live, frozenOrder: frozenOrder).map(\.id),
             [1, 2, 3]
         )
     }

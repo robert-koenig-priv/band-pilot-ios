@@ -72,7 +72,14 @@ extension SongSorting {
     /// the snapshot sorts last rather than vanishing. Used to freeze list order while a per-song
     /// voting section is open, so a vote cannot reshuffle the list under the user's thumb.
     public static func applyingFreeze(_ songs: [Song], frozenOrder: [Int]) -> [Song] {
-        let index = Dictionary(uniqueKeysWithValues: frozenOrder.enumerated().map { ($1, $0) })
+        // `uniquingKeysWith:` (keeping the first occurrence), not `uniqueKeysWithValues:`: nothing
+        // upstream guarantees `frozenOrder`'s ids are unique, and the `firstIndex(of:)`-based
+        // implementation this replaced was inherently duplicate-tolerant. A duplicate id must
+        // degrade to an odd order, never a crash.
+        let index = Dictionary(
+            frozenOrder.enumerated().map { ($1, $0) },
+            uniquingKeysWith: { first, _ in first }
+        )
         return songs.sorted { (index[$0.id] ?? Int.max) < (index[$1.id] ?? Int.max) }
     }
 }
