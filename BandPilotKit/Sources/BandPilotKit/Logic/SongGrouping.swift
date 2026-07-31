@@ -19,6 +19,13 @@ public struct SongGroup: Identifiable, Sendable {
     public let flag: Flag?
 
     public var id: String { key }
+
+    public init(key: String, label: String, songs: [Song], flag: Flag?) {
+        self.key = key
+        self.label = label
+        self.songs = songs
+        self.flag = flag
+    }
 }
 
 public enum SongGrouping {
