@@ -1,7 +1,16 @@
 import Foundation
 
 extension Endpoint {
-    /// Per-song media links (there is no bulk-per-band read).
+    /// Every link in the band, in one call — what a load uses.
+    ///
+    /// Overloads the per-song route below, which stays as the fallback for when this fails. Learning
+    /// which songs had links used to cost a request per song, which is why the cache was filled once
+    /// and never refreshed.
+    public static func mediaLinks(bandId: Int) -> Endpoint<[MediaLink]> {
+        .init(method: .get, path: "api/bands/\(bandId)/media-links")
+    }
+
+    /// One song's links. The fallback path — see the band-wide overload above.
     public static func mediaLinks(bandId: Int, songId: Int) -> Endpoint<[MediaLink]> {
         .init(method: .get, path: "api/bands/\(bandId)/songs/\(songId)/media-links")
     }
