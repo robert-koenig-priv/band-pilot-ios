@@ -2,36 +2,170 @@ import XCTest
 @testable import BandPilotKit
 
 final class SongSortingTests: XCTestCase {
-    private func song(_ id: Int, _ name: String, _ artist: String?, _ status: SongStatus, _ avg: Double) -> Song {
+    private func song(
+        _ id: Int, _ name: String, _ artist: String?, _ status: SongStatus, _ avg: Double
+    ) -> Song {
         Song(id: id, bandId: 1, name: name, artist: artist, status: status, averageRating: avg)
     }
 
-    func testPracticeOrderByStatusThenRatingDesc() {
-        let songs = [
-            song(1, "A", "x", .readyForStage, 5.0),
-            song(2, "B", "x", .needPractice, 2.0),
-            song(3, "C", "x", .needPractice, 4.0),
-            song(4, "D", "x", .suggested, 1.0),
-        ]
-        let ordered = SongSorting.sorted(songs, by: .practiceOrder).map(\.id)
-        // NEED_PRACTICE (rating desc: 3 then 2) → SUGGESTED (4) → READY_FOR_STAGE (1)
-        XCTAssertEqual(ordered, [3, 2, 4, 1])
-    }
+    private func avg(_ s: Song) -> Double { s.averageRating }
 
     func testSortByNameCaseInsensitive() {
         let songs = [song(1, "banana", "x", .suggested, 0), song(2, "Apple", "x", .suggested, 0)]
-        XCTAssertEqual(SongSorting.sorted(songs, by: .name).map(\.id), [2, 1])
+        XCTAssertEqual(SongSorting.sorted(songs, by: .name, descending: false, ratingOf: avg).map(\.id), [2, 1])
     }
 
-    func testSortByArtistNilLast() {
-        let songs = [song(1, "A", nil, .suggested, 0), song(2, "B", "Zed", .suggested, 0), song(3, "C", "Alpha", .suggested, 0)]
-        // "" (nil) sorts first ascending, then Alpha, then Zed
-        XCTAssertEqual(SongSorting.sorted(songs, by: .artist).map(\.id), [1, 3, 2])
+    func testSortByArtistThenName() {
+        let songs = [
+            song(1, "B", "Zed", .suggested, 0),
+            song(2, "A", "Alpha", .suggested, 0),
+            song(3, "C", "Alpha", .suggested, 0),
+        ]
+        XCTAssertEqual(
+            SongSorting.sorted(songs, by: .artist, descending: false, ratingOf: avg).map(\.id),
+            [2, 3, 1]
+        )
+    }
+
+    /// Android's rating comparator is rating-descending with name as the tiebreak, and `descending`
+    /// then reverses the whole thing. So the un-reversed order is highest-rated first.
+    func testRatingSortIsHighestFirstWithNameTiebreak() {
+        let songs = [
+            song(1, "B", "x", .suggested, 4.0),
+            song(2, "A", "x", .suggested, 4.0),
+            song(3, "C", "x", .suggested, 5.0),
+        ]
+        XCTAssertEqual(
+            SongSorting.sorted(songs, by: .rating, descending: false, ratingOf: avg).map(\.id),
+            [3, 2, 1]
+        )
+    }
+
+    func testDescendingReversesTheOrder() {
+        let songs = [song(1, "A", "x", .suggested, 0), song(2, "B", "x", .suggested, 0)]
+        XCTAssertEqual(
+            SongSorting.sorted(songs, by: .name, descending: true, ratingOf: avg).map(\.id),
+            [2, 1]
+        )
+    }
+
+    /// The rating is injected because two different ratings are in play — the band average and the
+    /// member's own vote — and the sort must follow whichever the Rating display chip is showing.
+    func testSortUsesTheInjectedRating() {
+        let songs = [song(1, "A", "x", .suggested, 1.0), song(2, "B", "x", .suggested, 5.0)]
+        let inverted: (Song) -> Double = { 6 - $0.averageRating }
+        XCTAssertEqual(
+            SongSorting.sorted(songs, by: .rating, descending: false, ratingOf: inverted).map(\.id),
+            [1, 2]
+        )
     }
 
     func testFilterByStatus() {
         let songs = [song(1, "A", "x", .suggested, 0), song(2, "B", "x", .readyForStage, 0)]
-        XCTAssertEqual(SongSorting.filtered(songs, status: .readyForStage).map(\.id), [2])
-        XCTAssertEqual(SongSorting.filtered(songs, status: nil).count, 2)
+        let only = SongSorting.filtered(songs, status: .readyForStage, flagId: nil, flags: [:], search: "")
+        XCTAssertEqual(only.map(\.id), [2])
+        XCTAssertEqual(
+            SongSorting.filtered(songs, status: nil, flagId: nil, flags: [:], search: "").count, 2
+        )
+    }
+
+    func testFilterByFlagId() {
+        let songs = [song(1, "A", "x", .suggested, 0), song(2, "B", "x", .suggested, 0)]
+        let flags: [Int: [SongFlag]] = [
+            1: [SongFlag(id: 10, songId: 1, flagId: 7, meaning: "Solo", description: nil,
+                         meaningDetails: nil, color: nil, flagColor: "#FF0000", bandMemberId: nil)]
+        ]
+        let only = SongSorting.filtered(songs, status: nil, flagId: 7, flags: flags, search: "")
+        XCTAssertEqual(only.map(\.id), [1])
+    }
+
+    func testSearchMatchesNameOrArtistCaseInsensitively() {
+        let songs = [song(1, "Africa", "Toto", .suggested, 0), song(2, "Bitch", "Meredith", .suggested, 0)]
+        XCTAssertEqual(
+            SongSorting.filtered(songs, status: nil, flagId: nil, flags: [:], search: "TOT").map(\.id),
+            [1]
+        )
+        XCTAssertEqual(
+            SongSorting.filtered(songs, status: nil, flagId: nil, flags: [:], search: "bit").map(\.id),
+            [2]
+        )
+    }
+
+    /// `.whitespaces` does not include newlines, so a search of just "\n" used to survive trimming as
+    /// a non-empty needle and filter the list down to zero matches. Trimming with
+    /// `.whitespacesAndNewlines` treats it as no search at all.
+    func testWhitespaceAndNewlineOnlySearchReturnsEverySong() {
+        let songs = [song(1, "Africa", "Toto", .suggested, 0), song(2, "Bitch", "Meredith", .suggested, 0)]
+        XCTAssertEqual(
+            SongSorting.filtered(songs, status: nil, flagId: nil, flags: [:], search: " \n\t \n").count,
+            2
+        )
+    }
+
+    /// The exact differential the simulator could not observe: a live re-sort by rating would move
+    /// the mutated song, but `applyingFreeze` must hold the original snapshot order regardless.
+    ///
+    /// The input handed to `applyingFreeze` is deliberately the *live-resorted* list (order
+    /// `[1, 3, 2]`), not the original array with a value mutated in place (which would still be in
+    /// order `[1, 2, 3]` — identical to the expected output, so a no-op `applyingFreeze` would pass
+    /// this test too). Feeding in the reordered list means a no-op fails (it would return
+    /// `[1, 3, 2]` unchanged) and a live re-sort fails (it produced that very input), so only an
+    /// implementation that actually restores `frozenOrder` passes.
+    func testApplyingFreezeHoldsOrderAgainstAChangeThatWouldReorderALiveSort() {
+        let songs = [
+            song(1, "Abracadabra", "x", .suggested, 1.0),
+            song(2, "Crazy", "x", .suggested, 2.0),
+            song(3, "Zed", "x", .suggested, 3.0),
+        ]
+        let frozenOrder = songs.map(\.id)
+
+        // Mutate "Abracadabra"'s rating so a live rating-sort would now put it first.
+        var rated = songs
+        rated[0] = song(1, "Abracadabra", "x", .suggested, 99.0)
+
+        // An unfrozen live re-sort really would move it — and this reordered list, not `rated`
+        // itself, is what gets fed to `applyingFreeze` below.
+        let live = SongSorting.sorted(rated, by: .rating, descending: false, ratingOf: avg)
+        XCTAssertEqual(live.map(\.id), [1, 3, 2])
+
+        XCTAssertEqual(
+            SongSorting.applyingFreeze(live, frozenOrder: frozenOrder).map(\.id),
+            [1, 2, 3]
+        )
+    }
+
+    func testApplyingFreezeSortsASongAbsentFromTheSnapshotLast() {
+        let songs = [song(1, "A", "x", .suggested, 0), song(2, "B", "x", .suggested, 0)]
+        XCTAssertEqual(
+            SongSorting.applyingFreeze(songs, frozenOrder: [2]).map(\.id),
+            [2, 1]
+        )
+    }
+
+    /// `Array.sorted` is explicitly documented as not a stable sort, and every song absent from the
+    /// snapshot shares the `Int.max` fallback key — so without an explicit tiebreak this would pass
+    /// only by luck of today's stdlib. `applyingFreeze` breaks the tie by id, so this is a genuine
+    /// guarantee rather than an accident of implementation.
+    func testApplyingFreezeKeepsAbsentSongsInStableRelativeOrder() {
+        let songs = [
+            song(1, "A", "x", .suggested, 0),
+            song(2, "B", "x", .suggested, 0),
+            song(3, "C", "x", .suggested, 0),
+        ]
+        XCTAssertEqual(
+            SongSorting.applyingFreeze(songs, frozenOrder: [3]).map(\.id),
+            [3, 1, 2]
+        )
+    }
+
+    /// The fatal-erroring `uniqueKeysWithValues:` this replaced would trap on a duplicate id in
+    /// `frozenOrder`. A duplicate must degrade to an odd order instead — ordered by each id's *first*
+    /// occurrence in `frozenOrder`.
+    func testApplyingFreezeToleratesDuplicateIdsInFrozenOrder() {
+        let songs = [song(1, "A", "x", .suggested, 0), song(2, "B", "x", .suggested, 0)]
+        XCTAssertEqual(
+            SongSorting.applyingFreeze(songs, frozenOrder: [2, 2, 1]).map(\.id),
+            [2, 1]
+        )
     }
 }

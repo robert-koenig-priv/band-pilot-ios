@@ -29,8 +29,8 @@ public final class BandDetailViewModel {
     /// What this member may upload: storage present, terms pending, per-kind size caps.
     public private(set) var uploadPolicy: MediaUploadPolicy?
 
-    /// Which owner's files the panel shows. In-memory, consistent with this app's deliberate choice not
-    /// to persist filter/sort state.
+    /// Which owner's files the panel shows. In-memory: this is a per-session view of one song's panel,
+    /// not a page-level preference.
     public var ownerFilter: MediaOwnerFilter = .mineAndBand
 
     public static let bandLevelFilesKey = -1
@@ -49,14 +49,6 @@ public final class BandDetailViewModel {
     public var voteError: String?
     public var flagError: String?
     public var formError: String?
-
-    // Filter/sort (drive the derived list)
-    public var statusFilter: SongStatus?
-    public var sort: SongSort = .practiceOrder
-
-    public var visibleSongs: [Song] {
-        SongSorting.visible(songs, status: statusFilter, sort: sort)
-    }
 
     @ObservationIgnored public let bandId: Int
     @ObservationIgnored private let currentUserId: Int
