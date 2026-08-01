@@ -169,12 +169,13 @@ struct SongsView: View {
         .drawerToolbar(shell)
         .task {
             await vm.load()
-            // `onChange(of: flagsInUse...)` below never fires on its initial value, and `vm.flags` is
-            // empty before `load()` returns — so a flag filter persisted from a band that actually has
-            // that flag would never get reconciled if the newly-loaded band has none at all. Running
-            // reconcile once, right here, covers that first-load case; the onChange stays for every
-            // later mutation (e.g. a flag deleted mid-session).
-            header.reconcile(flagsInUse: flagsInUse)
+            // Only reconcile against a load that actually succeeded. `load()` swallows its errors and
+            // leaves `flags` empty on failure, so reconciling here would read "no flags exist" from a
+            // network hiccup and delete a perfectly valid filter — which persists app-globally, before
+            // the user can even press Retry.
+            if vm.error == nil {
+                header.reconcile(flagsInUse: flagsInUse)
+            }
             // The drawer's band heading, refreshed from the page that actually fetched the band.
             // BandsView already supplies the name on tap, so this is normally a no-op — but a deep
             // link (BP_OPEN_BAND) arrives with no name at all, and Android likewise shows the name
