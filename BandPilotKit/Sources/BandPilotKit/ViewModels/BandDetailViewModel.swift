@@ -13,7 +13,12 @@ public final class BandDetailViewModel {
     public private(set) var ratings: [Int: [SongRating]] = [:]   // keyed by songId
     public private(set) var flags: [Int: [SongFlag]] = [:]   // keyed by songId
     public private(set) var flagCatalog: [Flag] = []
-    public private(set) var mediaLinks: [Int: [MediaLink]] = [:]   // keyed by songId (lazily loaded)
+    /// Media **links** per song, from one band-scoped call in ``load()``.
+    ///
+    /// Every song gets a key even when it has no links, which is what stops ``ensureMediaLoaded(songId:)``
+    /// from firing per row. Was a per-row lazy fan-out, which is why a refresh never picked up a link
+    /// another member had added or deleted.
+    public private(set) var mediaLinks: [Int: [MediaLink]] = [:]
 
     /// Media **files** per song, plus band-level ones under ``bandLevelFilesKey``.
     ///
@@ -71,12 +76,21 @@ public final class BandDetailViewModel {
             async let catalogF = api.send(.flags(bandId: bandId))
             async let allBandsF = api.send(.bands)
             async let withRatingsF = api.send(.songsWithRatings(bandId: bandId))
+            // `try?` rather than joining the throwing awaits below: a 404 here means the backend
+            // predates the band-wide route, which must degrade to links-on-demand rather than failing
+            // the whole screen — the same reasoning as `mediaFilesSupported`.
+            //
+            // ⚠️ It must stay an `async let`. Writing `let x = try? await api.send(...)` here reads
+            // almost identically but suspends *at this line*, so the five fetches above stop
+            // overlapping with it and the load gets slower for no reason.
+            async let bandLinksF: [MediaLink]? = try? await api.send(.mediaLinks(bandId: bandId))
 
             let memberships = try await membershipsF
             let rosterList = try await rosterF
             let catalog = try await catalogF
             let allBands = try await allBandsF
             let withRatings = try await withRatingsF
+            let bandLinks = await bandLinksF
 
             roster = rosterList
             flagCatalog = catalog
@@ -92,6 +106,18 @@ public final class BandDetailViewModel {
             songs = withRatings.map(\.song)
             ratings = Dictionary(uniqueKeysWithValues: withRatings.map { ($0.id, $0.ratings) })
             flags = Dictionary(uniqueKeysWithValues: withRatings.map { ($0.id, $0.flags) })
+
+            // Seeded with every song **before** the groups are overlaid, so a song with no links still
+            // counts as loaded and `SongRow`'s `.task` does not fire a pointless per-song fetch for it.
+            // Assigning the whole map is also what makes this a refresh: the per-row fan-out it replaces
+            // could only ever add keys, so a link somebody else deleted stayed on screen.
+            //
+            // nil means the call failed — leave the map alone and let `ensureMediaLoaded` fall back.
+            if let bandLinks {
+                var seeded = Dictionary(uniqueKeysWithValues: songs.map { ($0.id, [MediaLink]()) })
+                seeded.merge(Dictionary(grouping: bandLinks, by: \.songId)) { _, fetched in fetched }
+                mediaLinks = seeded
+            }
         } catch let apiError as APIError {
             error = apiError
         } catch let other {
@@ -136,7 +162,7 @@ public final class BandDetailViewModel {
         ratings[songId]?.first { $0.bandMemberId == memberId }?.rating ?? 0
     }
 
-    // MARK: - Media links (lazily fetched per song, no bulk read)
+    // MARK: - Media links (one bulk read in load(); per-song fetch is the fallback)
 
     /// Whether a song has anything at all — link or file. Gates the row's play button.
     public func hasMedia(_ songId: Int) -> Bool {
@@ -231,7 +257,9 @@ public final class BandDetailViewModel {
 
     public func media(for songId: Int) -> [MediaLink] { mediaLinks[songId] ?? [] }
 
-    /// Fetch a song's media links once (called as rows appear). No-ops if already loaded/in-flight.
+    /// One song's links, at most once. The **fallback**: ``load()`` fills the map in one call, so this
+    /// no-ops for every song unless that bulk read failed, in which case no song has a key and each row
+    /// fetches its own.
     public func ensureMediaLoaded(songId: Int) async {
         guard mediaLinks[songId] == nil, !mediaInFlight.contains(songId) else { return }
         mediaInFlight.insert(songId)

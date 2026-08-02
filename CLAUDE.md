@@ -191,13 +191,12 @@ cache. Writes: `PUT .../songs/{id}`, `POST|PUT|DELETE .../songs/{songId}/ratings
 Rehearsals: `GET|POST .../rehearsals`, `PUT|DELETE .../rehearsals/{id}`, `.../clone`,
 `.../rehearsals/{id}/songs[/{rowId}]`, `.../missing-members[/{rowId}]`.
 Media files: `.../media-files` (band-scoped with an optional song filter, **not** nested under a song —
-a file need not belong to one, and one band-scoped read avoids the per-song fan-out that `mediaLinks`
-still pays, which matters against a backend that sleeps), plus `upload-policy`, `upload-intents`,
-`{id}/complete`, `{id}/download-url`.
+a file need not belong to one), plus `upload-policy`, `upload-intents`, `{id}/complete`,
+`{id}/download-url`.
 
 Vote and flag writes **patch the local cache from the write response** and recompute the average with
-`RatingMath` — no re-fetch. Media links are the one deliberate per-song fan-out, because the backend
-has no bulk read for them.
+`RatingMath` — no re-fetch. Media links now come from one band-scoped read (`GET .../media-links`) like
+media files; the per-song route remains as the fallback when that call fails, and for every write.
 
 ## Docs
 
